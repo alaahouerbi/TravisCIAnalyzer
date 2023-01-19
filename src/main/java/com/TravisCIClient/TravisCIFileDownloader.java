@@ -107,7 +107,8 @@ public class TravisCIFileDownloader {
 			String localrepo = Config.rootDir + repourl; 
 			String localfolder = Config.travisRepoDir + repourl;
 			localfolder = localfolder.replace('/', '\\');
-			repo = github.getRepository(localfolder); //getting lost here??
+			//this one gets repo name as input
+			repo = github.getRepository(repourl); //getting lost here??
 
 			GHCommit passcommit = repo.getCommit(passcmt);
 			
@@ -256,6 +257,7 @@ public class TravisCIFileDownloader {
 			if (!status.toLowerCase().equals("unknow")) {
 
 				String repourl = item.getRepoUrl();
+				//build localFolder from repoUrl
 				String localfolder = ProjectPropertyAnalyzer.getProjName(repourl);
 				// String reponame=ProjectPropertyAnalyzer.getProjRepoName(repourl);
 
