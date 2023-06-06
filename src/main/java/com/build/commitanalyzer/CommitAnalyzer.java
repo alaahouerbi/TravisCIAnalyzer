@@ -1,31 +1,12 @@
 package com.build.commitanalyzer;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.TreeMap;
 
-//import org.apache.commons.compress.utils.IOUtils;
-import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.CheckoutConflictException;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -34,58 +15,48 @@ import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
 import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.diff.RawTextComparator;
+import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.errors.RevisionSyntaxException;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
-import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.patch.HunkHeader;
+import org.eclipse.jgit.patch.HunkHeader.OldImage;
 import org.eclipse.jgit.revplot.PlotCommitList;
 import org.eclipse.jgit.revplot.PlotLane;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevSort;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.AndRevFilter;
 import org.eclipse.jgit.revwalk.filter.CommitTimeRevFilter;
 import org.eclipse.jgit.revwalk.filter.MaxCountRevFilter;
-import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 
 import com.build.analyzer.entity.CommitChange;
 import com.config.Config;
-import com.csharp.astgenerator.SrcmlUnityCsMetaDataGenerator;
-import com.csharp.astgenerator.SrcmlUnityCsTreeGenerator;
 import com.csharp.diff.CSharpDiffGenerator;
 import com.github.gumtreediff.actions.EditScript;
-import com.github.gumtreediff.actions.EditScriptGenerator;
-import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
 
 //import edu.utsa.data.DataResultsHolder;
 //import edu.utsa.data.DataStatsHolder;
 //import edu.utsa.main.MainClass;
 
 import com.github.gumtreediff.actions.model.Action;
-import com.github.gumtreediff.gen.srcml.SrcmlCsTreeGenerator;
-import com.github.gumtreediff.matchers.MappingStore;
-import com.github.gumtreediff.matchers.Matcher;
-import com.github.gumtreediff.matchers.Matchers;
-import com.github.gumtreediff.matchers.heuristic.gt.CompleteBottomUpMatcher;
-import com.github.gumtreediff.tree.ITree;
-import com.travisdiff.TravisCIDiffGenMngr;
 import com.travisdiff.TravisCIDiffGenerator;
 import com.unity.callgraph.ClassFunction;
 import com.unity.entity.PerfFixData;
 
 import edu.util.fileprocess.TextFileReaderWriter;
-
-import org.apache.commons.io.IOUtils;
 
 /**
  * 
@@ -160,6 +131,20 @@ public class CommitAnalyzer {
 		this.commitChangeTracker = new CommitChange();
 		this.gradleChanges = "";
 		this.gitUrl = giturl;
+	}
+	
+	/**Just for testing purposes*/
+	public CommitAnalyzer(String projectOwner, String project, File projectLocation) throws Exception{
+		this.projectOwner = projectOwner;
+		this.project = project;
+		directoryPath = projectLocation.getAbsolutePath();
+		commitAnalyzingUtils = new CommitAnalyzingUtils();
+		statsHolder = new DataStatsHolder();
+		repository = commitAnalyzingUtils.setRepository(directoryPath);
+		git = new Git(repository);
+		rw = new RevWalk(repository);
+		this.commitChangeTracker = new CommitChange();
+		this.gradleChanges = "";
 	}
 
 	public CommitChange getCommitChangeTracker() {
@@ -359,6 +344,57 @@ public class CommitAnalyzer {
 		return fixcommit;
 	}
 
+	/**Returns an Integer wrapping the number of lines added (positive) or removed (negative), or null if it failed to resolve a commit or errored*/
+	public Integer getLoCChange(String commitid) {
+		try (DiffFormatter df = new DiffFormatter(System.out)) {
+			ObjectId objectid1 = repository.resolve(commitid);
+			if (objectid1 == null) {
+				return null;
+			}
+			RevTree newTree = getTree(commitid);
+			RevCommit newCommit = rw.parseCommit(objectid1);
+			
+			RevCommit oldCommit = newCommit.getParent(0);
+			
+			if(oldCommit == null) //no parent to compare to
+				return null;
+			RevTree oldTree = oldCommit.getTree();
+			df.setRepository(repository);
+			df.setDiffComparator(RawTextComparator.DEFAULT);
+		    df.setDetectRenames(true);
+		    df.setContext(0);
+			List<DiffEntry> diffs = df.scan(oldTree, newTree);
+			int totalLines = 0;
+			for(DiffEntry diff : diffs) {
+				if(diff.getNewPath().contains("Config.java")) {
+					df.format(diff);
+					System.out.println(diff.getNewPath());
+				}
+				for (Edit edit : df.toFileHeader(diff).toEditList()) {
+					if(diff.getNewPath().contains("Config.java")) {
+						System.out.println("Removed: " + (edit.getEndA() - edit.getBeginA()));
+			            System.out.println("Added: " + (edit.getEndB() - edit.getBeginB()));
+					}
+		        }
+				List<? extends HunkHeader> hunks = df.toFileHeader(diff).getHunks();
+				for(HunkHeader hunk : hunks) {
+					OldImage image = hunk.getOldImage();
+					totalLines += image.getLinesAdded() - image.getLinesDeleted();
+					if(diff.getNewPath().contains("Config.java")) {
+						System.out.println(hunk);
+						System.out.println("Added: " + image.getLinesAdded());
+						System.out.println("Removed: " + image.getLinesDeleted());
+					}
+				}
+			}
+			return totalLines;
+		}catch(Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
 	public String getFileContentAtCommit(String commitid, DiffEntry diff) {
 		String content = "";
 		try {

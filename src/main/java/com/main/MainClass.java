@@ -1,51 +1,28 @@
 package com.main;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectLoader;
-import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
-import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.treewalk.filter.PathFilter;
-
 import com.TravisCIClient.TravisCIFileDownloader;
-import com.build.statement.StatementPatchXmlReader;
-import com.build.statement.StatementSimilarityMngr;
-import com.commit.analysis.CommitFileTypeAnalysisMngr;
+import com.build.commitanalyzer.CommitAnalyzer;
 import com.config.Config;
-import com.csharp.changesize.ChangeSizeAnalyzer;
-import com.csharp.diff.CSharpDiffGenMngr;
 import com.evaluation.CalculateEvaluation;
 import com.github.gumtreediff.actions.EditScript;
 import com.github.gumtreediff.actions.EditScriptGenerator;
 import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
 import com.github.gumtreediff.actions.model.Action;
-import com.github.gumtreediff.matchers.CompositeMatchers;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.ITree;
-import com.github.gumtreediff.tree.TreeUtils;
-import com.travis.parser.BashCmdAnalysis;
 import com.travis.parser.CmdClustering;
 import com.travis.parser.CommandFrequency;
 import com.travis.parser.ProjectCommand;
@@ -55,15 +32,9 @@ import com.travis.task.ToolAdoption;
 import com.travisdiff.DecorateJSonTree;
 import com.travisdiff.TravisCIDiffGenMngr;
 import com.travisdiff.TravisCITree;
-import com.unity.callgraph.CallGraphBasedDistinctFuncAnalyzer;
-import com.unity.callgraph.CallGraphBasedFuncAnalyzer;
-import com.unity.callgraph.CallGraphBasedFuncFixCommit;
-import com.unity.callgraph.UserDefinedCallAnalysis;
-import com.unity.commitanalyzer.CommitAnalysisMngr;
-import com.unity.entity.CommandType;
 import com.unity.entity.EvaluationProject;
-import com.unity.entity.PerfFixData;
 import com.unity.repodownloader.ProjectLoader;
+import com.utility.ProjectPropertyAnalyzer;
 
 import edu.util.fileprocess.CSVReaderWriter;
 import edu.util.fileprocess.CVSReader;
@@ -86,7 +57,8 @@ public class MainClass {
 				+ "\n10->RQ2->Build Block Analysis"
 				+ "\n11->RQ2->Build Pattern Analysis"
 				+ "\n12->-----"
-				+ "\n13->Generate Report of Commits");
+				+ "\n13->Generate Report of Commits"
+				+ "\n14->Compute line of code changes");
 
 		Scanner cin = new Scanner(System.in);
 
@@ -461,6 +433,20 @@ public class MainClass {
 			}
 
 			System.out.println("Post-print new test");
+		}
+		else if(inputid == 14) {
+			//testing with the CI analyzer product
+			try {
+				String projectUrl = "https://github.com/alaahouerbi/TravisCIAnalyzer.git";
+				CommitAnalyzer analyzer = new CommitAnalyzer("test", ProjectPropertyAnalyzer.getProjName(projectUrl), 
+						new File("D:\\Other\\Git Repos\\TravisCIAnalyzer\\.git"));
+				//using commit "bugfix"
+				Integer result = analyzer.getLoCChange("1cadaa794f19bef945409f5318d4e9fa729ee3cf");
+				System.out.println(result);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 	}
