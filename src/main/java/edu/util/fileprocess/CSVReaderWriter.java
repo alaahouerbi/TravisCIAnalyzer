@@ -15,11 +15,13 @@ import java.util.List;
 
 import org.apache.commons.csv.CSVFormat;
 
+import com.build.commitanalyzer.MLCommitDiffInfo;
 import com.helger.commons.csv.CSVParser;
 import com.opencsv.CSVWriter;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
+import com.opencsv.bean.CsvToBeanFilter;
 import com.opencsv.bean.HeaderColumnNameMappingStrategy;
 import com.opencsv.bean.StatefulBeanToCsv;
 import com.opencsv.bean.StatefulBeanToCsvBuilder;
@@ -208,6 +210,40 @@ public class CSVReaderWriter {
 
 			CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(CommandType.class).withMappingStrategy(strategy)
 					.withIgnoreLeadingWhiteSpace(true).build();
+
+			data = csvToBean.parse();
+
+		}
+
+		return data;
+	}
+	
+	public List<MLCommitDiffInfo> getMLCommitDiffInfoFromCSV(String strpath) throws Exception {
+
+		List<MLCommitDiffInfo> data = null;
+
+		Path path = Paths.get(strpath);
+
+		try (BufferedReader br = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+
+			HeaderColumnNameMappingStrategy<MLCommitDiffInfo> strategy = new HeaderColumnNameMappingStrategy<>();
+
+			strategy.setType(MLCommitDiffInfo.class);
+			
+			CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(MLCommitDiffInfo.class).withMappingStrategy(strategy)
+					.withIgnoreLeadingWhiteSpace(true).withFilter(new CsvToBeanFilter() {
+
+						@Override
+						public boolean allowLine(String[] line) {
+							for (String one : line) {
+				                if (one != null && one.length() > 0) {
+				                    return true;
+				                }
+				            }
+				            return false;
+						}
+						
+					}).build();
 
 			data = csvToBean.parse();
 

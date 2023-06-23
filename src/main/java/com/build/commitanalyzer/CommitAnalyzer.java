@@ -16,7 +16,6 @@ import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
-import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.Constants;
@@ -26,8 +25,6 @@ import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.patch.HunkHeader;
-import org.eclipse.jgit.patch.HunkHeader.OldImage;
 import org.eclipse.jgit.revplot.PlotCommitList;
 import org.eclipse.jgit.revplot.PlotLane;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -36,7 +33,9 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.AndRevFilter;
 import org.eclipse.jgit.revwalk.filter.CommitTimeRevFilter;
 import org.eclipse.jgit.revwalk.filter.MaxCountRevFilter;
+import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.treewalk.EmptyTreeIterator;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 
@@ -103,7 +102,7 @@ public class CommitAnalyzer {
 		this.projectOwner = projectOwner;
 		this.project = project;
 
-		directoryPath = Config.repoDir + project + "/.git";
+		directoryPath = Config.repoDir + project + "\\.git";
 
 		commitAnalyzingUtils = new CommitAnalyzingUtils();
 		statsHolder = new DataStatsHolder();
@@ -119,8 +118,8 @@ public class CommitAnalyzer {
 		this.projectOwner = projectOwner;
 		this.project = project;
 
-		directoryPath = Config.repoDir + project + "/.git";
-
+		directoryPath = Config.repoDir + project + "\\.git";
+		System.out.println(directoryPath);
 		commitAnalyzingUtils = new CommitAnalyzingUtils();
 		statsHolder = new DataStatsHolder();
 		repository = commitAnalyzingUtils.setRepository(directoryPath);
@@ -342,44 +341,50 @@ public class CommitAnalyzer {
 		return fixcommit;
 	}
 
-	/**Returns an Integer wrapping the number of lines added (positive) or removed (negative), or null if it failed to resolve a commit or errored*/
-	public Integer getLoCChange(String commitid) {
+	/**Returns an int[] containing the lines added, removed, and modified, in that order, between that commit and its first parent, or null if it failed to resolve a commit or errored*/
+	public int[] getLoCChange(String commitid) {
 		try (DiffFormatter df = new DiffFormatter(System.out)) {
 			ObjectId objectid1 = repository.resolve(commitid);
-			if (objectid1 == null) {
+			if (objectid1 == null) { //invalid id
 				return null;
 			}
-			RevTree newTree = getTree(commitid);
-			RevCommit newCommit = rw.parseCommit(objectid1);
-			
-			RevCommit oldCommit = rw.parseCommit(newCommit.getParent(0).getId());
-			if(oldCommit == null) //no parent to compare to
+			RevTree newTree = getTree(commitid); //the current file tree
+			if(newTree == null) {
 				return null;
-			RevTree oldTree = oldCommit.getTree();
-			int totalLines = 0;
-
+			}
+			RevCommit newCommit = rw.parseCommit(objectid1);
+			RevTree oldTree = null;
+			if(newCommit.getParentCount() > 0) { //don't try to get parent of initial commit
+				RevCommit oldCommit = rw.parseCommit(newCommit.getParent(0).getId());
+				if(oldCommit == null) //no parent to compare to
+					return null;
+				oldTree = oldCommit.getTree(); //the previous commit's file tree
+			}
+			int totalAdded = 0, totalRemoved = 0, totalModified = 0;
+			
 			try(ObjectReader reader = git.getRepository().newObjectReader()) {
+				AbstractTreeIterator oldTreeIter = newCommit.getParentCount() > 0 ? new CanonicalTreeParser(null, reader, oldTree.getId()) : new EmptyTreeIterator();
 				df.setReader(reader, new org.eclipse.jgit.lib.Config());
-				List<DiffEntry> diffList = git.diff().setOldTree(new CanonicalTreeParser(null, reader, oldTree.getId()))
+				List<DiffEntry> diffList = git.diff().setOldTree(oldTreeIter)
 				.setNewTree(new CanonicalTreeParser(null, reader, newTree.getId())).call();
 				for(DiffEntry diff : diffList) {
-					System.out.println(diff.getNewPath());
-					if(diff.getNewPath().contains("README")) {
-						df.format(diff);
-						System.out.println(diff.getNewPath());
-					}
-					for (Edit edit : df.toFileHeader(diff).toEditList()) {
-						if(diff.getNewPath().contains("README")) {
+					if(diff.getNewPath().contains(".travis.yml")) {
+						for (Edit edit : df.toFileHeader(diff).toEditList()) {
+							System.out.println(diff.getNewPath());
 							int removed = edit.getEndA() - edit.getBeginA();
 							System.out.println("Removed: " + removed);
-							totalLines -= removed;
+							totalModified += removed;
+							totalRemoved += removed;
 							int added = edit.getEndB() - edit.getBeginB();
 							System.out.println("Added: " + added);
-							totalLines += added;
+							totalModified += added;
+							totalAdded += added;
 						}
 					}
 				}
 			}
+			return new int[] {totalAdded, totalRemoved, totalModified};
+			
 			/*
 			
 			df.setRepository(repository);
@@ -411,7 +416,6 @@ public class CommitAnalyzer {
 				}
 			}
 			*/
-			return totalLines;
 		}catch(Exception e) {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
@@ -444,7 +448,17 @@ public class CommitAnalyzer {
 		ObjectId lastCommitId = repository.resolve(cmtid);
 		// a RevWalk allows to walk over commits based on some filtering
 		try (RevWalk revWalk = new RevWalk(repository)) {
-			RevCommit commit = revWalk.parseCommit(lastCommitId);
+			List<Ref> refs = git.branchList().call();
+			for(Ref ref : refs) {
+				revWalk.markStart(revWalk.parseCommit(ref.getObjectId()));
+			}
+			RevCommit commit = null;
+			try{
+				commit = revWalk.parseCommit(lastCommitId);
+			}catch(MissingObjectException e) {
+				System.out.println("Assuming commit from " + project + " is missing");
+				return null;
+			}
 
 			// System.out.println("Time of commit (seconds since epoch): " +
 			// commit.getCommitTime());
@@ -453,7 +467,11 @@ public class CommitAnalyzer {
 			RevTree tree = commit.getTree();
 			// System.out.println("Having tree: " + tree);
 			return tree;
+		} catch (GitAPIException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		return null;
 	}
 
 	public String getStringFile(RevTree tree, String filter) throws IOException {
@@ -778,8 +796,9 @@ public class CommitAnalyzer {
 		}
 	}
 
-	private void checkOutAtSpecificCommitID(String commitid) {
+	public void checkOutAtSpecificCommitID(String commitid) {
 		try {
+			git.fetch().call();
 			git.checkout().setName(commitid).call();
 		} catch (RefAlreadyExistsException e) {
 			// TODO Auto-generated catch block
@@ -810,4 +829,17 @@ public class CommitAnalyzer {
 
 	}
 
+	public static File getCloneLocation(String projectName) {
+		return new File("D:\\Other\\Git Repos\\TravisCIAnalyzer\\Repository\\" + projectName);
+	}
+	
+	public void cloneRepository(String folderName) {
+		try {
+			File f = getCloneLocation(folderName);
+			Git.cloneRepository().setURI(gitUrl).setBranch("main").setDirectory(f).call();
+		} catch (GitAPIException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }

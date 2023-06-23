@@ -10,10 +10,10 @@ public class Config {
 	 //public static String
 	 //rootDir=".\\Project_Data";
 	 public static String
-	 rootDir="/home/alaa/alexis-project/TravisCIAnalyzer/";
+	 rootDir="D:\\Other\\Git Repos\\TravisCIAnalyzer\\";
 	 //
 	 //text file that contains list of projects to analyze
-	 public static String gitProjList=rootDir+"Project_Source_NonML.txt";
+	 public static String gitProjList=rootDir+"Project_Source.txt";
 	 public static String gitProjListNonML=rootDir+"Project_Source_NonML.txt";
 	 public static String gitProjListEval=rootDir+"eval_Project_Source.txt";
 	
@@ -21,7 +21,7 @@ public class Config {
 
 	 //reporDir used for storing Unity Projects
 	 public static String repoDirEval= rootDir+"EvalRepos/"; /*rootDir+"GitRepo/";*/	 
-	 public static String repoDir = rootDir+"GitRepo/";
+	 public static String repoDir = rootDir+"Repository\\";
 	 
 	 public static String travisRepoDir = "/home/alaa/alexis-project/CloneWithGetPy/travisData";
 	
@@ -43,8 +43,8 @@ public class Config {
 	public static int commitid = 1;
 	public static int stmtUniqueId = 1;
 	
-	public static String gitHubUserName="...";
-	public static String gitHubPwd="...";
+	public static String gitHubUserName="greatnessof42@gmail.com";
+	public static String gitHubPwd="8Z7r#*O8L";
 	
 	public static String[] compoundcmds= {"python","bash", "source", "python3", "sh", "eval", "xvfb-run", "/bin/bash",
 			"doit","ruby","unbuffer","catchsegv"};

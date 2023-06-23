@@ -7,12 +7,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Scanner;
 
 import com.TravisCIClient.TravisCIFileDownloader;
 import com.build.commitanalyzer.CommitAnalyzer;
+import com.build.commitanalyzer.MLCommitDiffInfo;
 import com.config.Config;
 import com.evaluation.CalculateEvaluation;
 import com.github.gumtreediff.actions.EditScript;
@@ -436,17 +438,63 @@ public class MainClass {
 		}
 		else if(inputid == 14) {
 			//testing with the CI analyzer product
-			try {
+			/*try {
 				String projectUrl = "https://github.com/alaahouerbi/TravisCIAnalyzer.git";
 				CommitAnalyzer analyzer = new CommitAnalyzer("test", ProjectPropertyAnalyzer.getProjName(projectUrl), 
 						new File("D:\\Other\\Git Repos\\TravisCIAnalyzer\\.git"));
 				//using commit "bugfix"
-				Integer result = analyzer.getLoCChange("1cadaa794f19bef945409f5318d4e9fa729ee3cf");
-				System.out.println(result);
+				int[] result = analyzer.getLoCChange("1cadaa794f19bef945409f5318d4e9fa729ee3cf");
+				System.out.println(Arrays.toString(result));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			*/
+			String csvPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
+			String outputPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
+			CSVReaderWriter readWrite = new CSVReaderWriter();
+			try {
+				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
+				for(MLCommitDiffInfo diffInfo : diffInfos) {
+					boolean travisModified = false;
+					loop: for(String name : diffInfo.getModifiedFiles()) { //check for travis change
+						if(name.contains(".travis.yml")) {
+							travisModified = true;
+							break loop;
+						}
+					}
+					if(travisModified) {
+						String projName = diffInfo.getProjName();
+						String projUrl = "https://github.com/" + projName + ".git";
+						String projFolderName = projName.substring(projName.indexOf("/") + 1);
+						CommitAnalyzer analyzer = new CommitAnalyzer("test", projFolderName, projUrl);
+						File file = CommitAnalyzer.getCloneLocation(projFolderName);
+						if(!file.exists()) {
+							System.out.println("Starting clone to " + file.getAbsolutePath());
+							analyzer.cloneRepository(projFolderName);
+							System.out.println("Clone complete");
+						}else{
+							//analyzer.checkOutAtSpecificCommitID(diffInfo.commitID);
+							//System.out.println("Checkout complete");
+							System.out.println(file.getAbsolutePath() + " already exists!");
+							System.out.println("Already cloned, skipping cloning");
+						}
+						
+						int[] result = analyzer.getLoCChange(diffInfo.getCommitID());
+						if(result != null) {
+							diffInfo.setLinesAdded(result[0]);
+							diffInfo.setLinesRemoved(result[1]);
+							diffInfo.setLinesModified(result[2]);
+							System.out.println(projName + " " + Arrays.toString(result));
+						}
+						//file.delete();
+					}
+				}
+				readWrite.writeBeanToFile(diffInfos, outputPath);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
 		}
 
 	}
