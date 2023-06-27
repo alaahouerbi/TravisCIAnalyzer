@@ -18,16 +18,18 @@ public class ListConverter extends AbstractBeanField<String[]>{
 	}
 	
 	@Override
-	protected String convertToWrite(Object obj) {
+	public String convertToWrite(Object obj) {
 		//assuming we're receiving a String[]
 		String[] strings = (String[]) obj;
-		StringBuilder sb = new StringBuilder("[");
+		StringBuilder sb = new StringBuilder();
+		//sb.append("[");
 		for(int i = 0; i < strings.length; i++) {
 			if(i != 0)
 				sb.append(",");
 			sb.append("'").append(strings[i]).append("'");
 		}
-		return sb.append("]").toString();
+		//return sb.append("]").toString();
+		return sb.toString();
 	}
 	
 }

@@ -252,6 +252,50 @@ public class CSVReaderWriter {
 		return data;
 	}
 	
+	/**Input data is not actually processed here, only used to extract header for mapping strategy*/
+	public void writeMLDiffBeanToFile(List<MLCommitDiffInfo> fixdata, String outputDataPath, String inputDataPath)
+			throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException {
+
+		try {
+
+			// Creating writer class to generate
+			// csv file
+			FileWriter writer = new FileWriter(outputDataPath);
+
+			//Perform read of the input data to get header mapping
+			List<MLCommitDiffInfo> data = null;
+			Path path = Paths.get(inputDataPath);
+			HeaderColumnNameMappingStrategy<MLCommitDiffInfo> strategy = null;
+			try (BufferedReader br = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+				strategy = new HeaderColumnNameMappingStrategy<>();
+				strategy.setType(MLCommitDiffInfo.class);
+				CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(MLCommitDiffInfo.class).withMappingStrategy(strategy)
+						.withIgnoreLeadingWhiteSpace(true).withFilter(new CsvToBeanFilter() {
+							@Override
+							public boolean allowLine(String[] line) {
+								for (String one : line) {
+					                if (one != null && one.length() > 0) {
+					                    return true;
+					                }
+					            }
+					            return false;
+							}
+						}).build();
+				data = csvToBean.parse();
+			}
+
+			StatefulBeanToCsvBuilder<MLCommitDiffInfo> builder = new StatefulBeanToCsvBuilder<MLCommitDiffInfo>(writer);
+			StatefulBeanToCsv<MLCommitDiffInfo> beanWriter = builder.withMappingStrategy(strategy).build();
+
+			beanWriter.write(fixdata);
+			writer.close();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
 	public <T> void writeBeanToFile(List<T> fixdata, String csvfilepath)
 			throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException {
 

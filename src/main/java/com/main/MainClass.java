@@ -14,6 +14,7 @@ import java.util.Scanner;
 
 import com.TravisCIClient.TravisCIFileDownloader;
 import com.build.commitanalyzer.CommitAnalyzer;
+import com.build.commitanalyzer.ListConverter;
 import com.build.commitanalyzer.MLCommitDiffInfo;
 import com.config.Config;
 import com.evaluation.CalculateEvaluation;
@@ -36,7 +37,6 @@ import com.travisdiff.TravisCIDiffGenMngr;
 import com.travisdiff.TravisCITree;
 import com.unity.entity.EvaluationProject;
 import com.unity.repodownloader.ProjectLoader;
-import com.utility.ProjectPropertyAnalyzer;
 
 import edu.util.fileprocess.CSVReaderWriter;
 import edu.util.fileprocess.CVSReader;
@@ -450,7 +450,7 @@ public class MainClass {
 			}
 			*/
 			String csvPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
-			String outputPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
+			String outputPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output_test.csv";
 			CSVReaderWriter readWrite = new CSVReaderWriter();
 			try {
 				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
@@ -489,7 +489,12 @@ public class MainClass {
 						//file.delete();
 					}
 				}
+				File outputFile = new File(outputPath);
+				if(!outputFile.exists())
+					outputFile.createNewFile();
 				readWrite.writeBeanToFile(diffInfos, outputPath);
+				String[] strings = diffInfos.get(0).getModifiedFiles();
+				System.out.println(new ListConverter().convertToWrite(strings));
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
