@@ -38,7 +38,13 @@ public class Config {
 	public static int commitid = 1;
 	public static int stmtUniqueId = 1;
 	
-	//This token expires at the end of 2023, and should be replaced with a token from whoever is working on this then. 
+	/* This token expires at the end of 2023, and should be replaced with a token from whoever is working on this then. 
+	 * 
+	 * To create a secure token like this, go to Github, click your profile picture, and go to 
+	 * Settings > Developer Settings > Personal Access Token > Fine-Grained tokens.
+	 * 
+	 * Only set the required permissions. Cloning public repositories needs only read access to public repositories.  
+	 */
 	public static String gitHubUserName="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";
 	public static String gitHubPwd="";
 	
