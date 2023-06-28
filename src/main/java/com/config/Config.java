@@ -1,10 +1,5 @@
 package com.config;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.Date;
-
 public class Config {
 	// public static String rootDir="/media/AutoBuilder/UnityPerformance/";
 	 //public static String
@@ -43,8 +38,9 @@ public class Config {
 	public static int commitid = 1;
 	public static int stmtUniqueId = 1;
 	
-	public static String gitHubUserName="greatnessof42@gmail.com";
-	public static String gitHubPwd="8Z7r#*O8L";
+	//This token expires at the end of 2023, and should be replaced with a token from whoever is working on this then. 
+	public static String gitHubUserName="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";
+	public static String gitHubPwd="";
 	
 	public static String[] compoundcmds= {"python","bash", "source", "python3", "sh", "eval", "xvfb-run", "/bin/bash",
 			"doit","ruby","unbuffer","catchsegv"};
