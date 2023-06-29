@@ -1,24 +1,33 @@
 package com.build.commitanalyzer;
 
 import com.opencsv.bean.CsvBindByName;
+import com.opencsv.bean.CsvBindByPosition;
 import com.opencsv.bean.CsvCustomBindByName;
 
 public class MLCommitDiffInfo {
 	
+	@CsvBindByPosition(position = 0, required = true)
 	@CsvBindByName(column = "GitAuthor", required = true)
 	private String gitAuthor;
+	@CsvBindByPosition(position = 1, required = true)
 	@CsvBindByName(column = "ProjectName", required = true)
 	private String projName;
+	@CsvBindByPosition(position = 2, required = true)
 	@CsvBindByName(column = "CommitID", required = true)
 	private String commitID;
+	@CsvBindByPosition(position = 3, required = true)
 	@CsvBindByName(column = "CommitMessage", required = true)
 	private String commitMessage;
+	@CsvBindByPosition(position = 4, required = true)
 	@CsvCustomBindByName(column = "Lsof ModifiedFiles", required = true, converter = ListConverter.class)
 	private String[] modifiedFiles;
+	@CsvBindByPosition(position = 5, required = false)
 	@CsvBindByName(column = "LinesAdded", required = false)
 	private int linesAdded;
+	@CsvBindByPosition(position = 6, required = false)
 	@CsvBindByName(column = "LinesRemoved", required = false)
 	private int linesRemoved;
+	@CsvBindByPosition(position = 7, required = false)
 	@CsvBindByName(column = "LinesModified", required = false)
 	private int linesModified;
 	

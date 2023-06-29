@@ -43,7 +43,9 @@ public class Config {
 	 * To create a secure token like this, go to Github, click your profile picture, and go to 
 	 * Settings > Developer Settings > Personal Access Token > Fine-Grained tokens.
 	 * 
-	 * Only set the required permissions. Cloning public repositories needs only read access to public repositories.  
+	 * Only set the required permissions. Cloning public repositories needs only read access to public repositories. 
+	 * 
+	 * Github accounts can also be used directly, if 2FA is off, but are not recommended. 
 	 */
 	public static String gitHubUserName="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";
 	public static String gitHubPwd="";

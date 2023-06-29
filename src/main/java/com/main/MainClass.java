@@ -450,7 +450,7 @@ public class MainClass {
 			}
 			*/
 			String csvPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
-			String outputPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output_test.csv";
+			String outputPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
 			CSVReaderWriter readWrite = new CSVReaderWriter();
 			try {
 				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
@@ -492,9 +492,7 @@ public class MainClass {
 				File outputFile = new File(outputPath);
 				if(!outputFile.exists())
 					outputFile.createNewFile();
-				readWrite.writeBeanToFile(diffInfos, outputPath);
-				String[] strings = diffInfos.get(0).getModifiedFiles();
-				System.out.println(new ListConverter().convertToWrite(strings));
+				readWrite.writeMLDiffBeanToFile(diffInfos, outputPath);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
