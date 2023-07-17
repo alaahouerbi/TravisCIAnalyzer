@@ -498,6 +498,10 @@ public class MainClass {
 				e.printStackTrace();
 			}
 			
+		}else if(inputid == 15) { //temporary testing task
+			//TODO test with more similar files
+			TrvaisYamlFileParser parser = new TrvaisYamlFileParser();
+			System.out.println(parser.getYamlDiffStr(parser.getYamlDiff("D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\new 59.yml", "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\new 60.yml")));
 		}
 
 	}
