@@ -30,6 +30,9 @@ public class MLCommitDiffInfo {
 	@CsvBindByPosition(position = 7, required = false)
 	@CsvBindByName(column = "LinesModified", required = false)
 	private int linesModified;
+	@CsvBindByPosition(position = 8, required = false)
+	@CsvBindByName(column = "TravisASTDiff", required = false)
+	private String travisAstDiffStr;
 	
 	public String getGitAuthor() {
 		return gitAuthor;
@@ -95,4 +98,11 @@ public class MLCommitDiffInfo {
 		this.linesModified = linesModified;
 	}
 	
+	public String getTravisAstDiffStr() {
+		return travisAstDiffStr;
+	}
+	
+	public void setTravisAstDiffStr(String travisAstDiffStr) {
+		this.travisAstDiffStr = travisAstDiffStr;
+	}
 }

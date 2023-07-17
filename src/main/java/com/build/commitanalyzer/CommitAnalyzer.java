@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
+import org.assimbly.docconverter.DocConverter;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.CheckoutConflictException;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -49,6 +50,9 @@ import com.github.gumtreediff.actions.EditScript;
 //import edu.utsa.main.MainClass;
 
 import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.gen.SyntaxException;
+import com.travis.parser.TravisYamlFileParser;
+import com.travis.parser.TravisYamlFileParser.EditResults;
 import com.travisdiff.TravisCIDiffGenerator;
 import com.unity.callgraph.ClassFunction;
 import com.unity.entity.PerfFixData;
@@ -341,6 +345,59 @@ public class CommitAnalyzer {
 		return fixcommit;
 	}
 
+	public EditResults getYamlFileChangeAST(String commitid, String fileName) {
+		try (DiffFormatter df = new DiffFormatter(System.out)) {
+			ObjectId objectid1 = repository.resolve(commitid);
+			if (objectid1 == null) { //invalid id
+				return null;
+			}
+			RevTree newTree = getTree(commitid); //the current file tree
+			if(newTree == null) {
+				return null;
+			}
+			RevCommit newCommit = rw.parseCommit(objectid1);
+			RevTree oldTree = null;
+			if(newCommit.getParentCount() > 0) { //don't try to get parent of initial commit
+				RevCommit oldCommit = rw.parseCommit(newCommit.getParent(0).getId());
+				if(oldCommit == null) //no parent to compare to
+					return null;
+				oldTree = oldCommit.getTree(); //the previous commit's file tree
+			}
+			
+			String newTravisContent = this.getStringFile(newTree, fileName);
+			System.out.println("New travis:\n" + newTravisContent + "\n");
+			String oldTravisContent = this.getStringFile(oldTree, fileName);
+			System.out.println("Old travis:\n" + oldTravisContent + "\n");
+			
+			//TODO Fix up yaml to match the more strict format this parser uses
+			/* This appears to be considered valid by travis, but not the code:
+			 * foo:
+			 *     - bar:
+			 *     baz:
+			 */
+			
+			//locations of temporary files
+			final String newFilePath =  Config.rootDir + "Project_Data\\new_travis.yml", oldFilePath =  Config.rootDir + "Project_Data\\old_travis.yml";
+			DocConverter.convertStringToFile(newFilePath, newTravisContent); //create temp travis files
+			DocConverter.convertStringToFile(oldFilePath, oldTravisContent);
+			TravisYamlFileParser parser = new TravisYamlFileParser();
+			EditResults results;
+			try{
+				results = parser.getYamlDiff(oldFilePath, newFilePath);
+			}catch(SyntaxException syn) {
+				System.out.println("Yaml doesn't match format!");
+				return null;
+			}
+			new File(newFilePath).delete();
+			new File(oldFilePath).delete();
+			return results;
+		}catch(Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
 	/**Returns an int[] containing the lines added, removed, and modified, in that order, between that commit and its first parent, or null if it failed to resolve a commit or errored*/
 	public int[] getLoCChange(String commitid) {
 		try (DiffFormatter df = new DiffFormatter(System.out)) {
@@ -366,7 +423,7 @@ public class CommitAnalyzer {
 				AbstractTreeIterator oldTreeIter = newCommit.getParentCount() > 0 ? new CanonicalTreeParser(null, reader, oldTree.getId()) : new EmptyTreeIterator();
 				df.setReader(reader, new org.eclipse.jgit.lib.Config());
 				List<DiffEntry> diffList = git.diff().setOldTree(oldTreeIter)
-				.setNewTree(new CanonicalTreeParser(null, reader, newTree.getId())).call();
+							.setNewTree(new CanonicalTreeParser(null, reader, newTree.getId())).call();
 				for(DiffEntry diff : diffList) {
 					if(diff.getNewPath().contains(".travis.yml")) {
 						for (Edit edit : df.toFileHeader(diff).toEditList()) {

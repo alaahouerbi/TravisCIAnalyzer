@@ -4,6 +4,8 @@ public class Config {
 	// public static String rootDir="/media/AutoBuilder/UnityPerformance/";
 	 //public static String
 	 //rootDir=".\\Project_Data";
+
+	 //Set to the project root folder, wherever your TravisCIAnalyzer is
 	 public static String
 	 rootDir="D:\\Other\\Git Repos\\TravisCIAnalyzer\\";
 	 //

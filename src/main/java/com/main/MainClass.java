@@ -14,7 +14,6 @@ import java.util.Scanner;
 
 import com.TravisCIClient.TravisCIFileDownloader;
 import com.build.commitanalyzer.CommitAnalyzer;
-import com.build.commitanalyzer.ListConverter;
 import com.build.commitanalyzer.MLCommitDiffInfo;
 import com.config.Config;
 import com.evaluation.CalculateEvaluation;
@@ -30,6 +29,7 @@ import com.travis.parser.CmdClustering;
 import com.travis.parser.CommandFrequency;
 import com.travis.parser.ProjectCommand;
 import com.travis.parser.TravisYamlFileParser;
+import com.travis.parser.TravisYamlFileParser.EditResults;
 import com.travis.task.TaskAnalyzer;
 import com.travis.task.ToolAdoption;
 import com.travisdiff.DecorateJSonTree;
@@ -449,8 +449,8 @@ public class MainClass {
 				e.printStackTrace();
 			}
 			*/
-			String csvPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
-			String outputPath = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
+			String csvPath = Config.rootDir + "Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
+			String outputPath = Config.rootDir + "Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
 			CSVReaderWriter readWrite = new CSVReaderWriter();
 			try {
 				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
@@ -473,12 +473,11 @@ public class MainClass {
 							analyzer.cloneRepository(projFolderName);
 							System.out.println("Clone complete");
 						}else{
-							//analyzer.checkOutAtSpecificCommitID(diffInfo.commitID);
-							//System.out.println("Checkout complete");
 							System.out.println(file.getAbsolutePath() + " already exists!");
 							System.out.println("Already cloned, skipping cloning");
 						}
-						
+						//analyzer.checkOutAtSpecificCommitID(diffInfo.getCommitID());
+						//System.out.println("Checkout complete");
 						int[] result = analyzer.getLoCChange(diffInfo.getCommitID());
 						if(result != null) {
 							diffInfo.setLinesAdded(result[0]);
@@ -486,7 +485,12 @@ public class MainClass {
 							diffInfo.setLinesModified(result[2]);
 							System.out.println(projName + " " + Arrays.toString(result));
 						}
-						//file.delete();
+						
+						EditResults results = analyzer.getYamlFileChangeAST(diffInfo.getCommitID(), ".travis.yml");
+						if(results != null) {
+							String astStr = new TravisYamlFileParser().getYamlDiffStr(results);
+							diffInfo.setTravisAstDiffStr(astStr);
+						}
 					}
 				}
 				File outputFile = new File(outputPath);
