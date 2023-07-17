@@ -87,7 +87,7 @@ public class TravisYamlFileParser {
 			sb.append("}->{");
 			ITree mapped = results.mappings.getDstForSrc(a.getNode()); //only non-null for updates and moves
 			String treeStr2 = ""; //should be left as this for deletions
-			if(a.getName().contains("insert-tree")) //addition
+			if(a.getName().contains("insert")) //addition
 				treeStr2 = treeStr; //addition should be {},{newStuff}
 			if(mapped != null) { //update or move of some sort
 				treeStr2 = mapped.toTreeString().trim();
@@ -105,7 +105,7 @@ public class TravisYamlFileParser {
 		}
 		sb.append("']");
 		System.out.println(sb.toString());
-		return null;
+		return sb.toString();
 	}
 	
 	public String getJsonDataFromYamlFile(String filepath) throws Exception {
