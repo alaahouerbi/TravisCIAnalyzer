@@ -29,7 +29,7 @@ import com.github.gumtreediff.tree.ITree;
 import com.travis.parser.CmdClustering;
 import com.travis.parser.CommandFrequency;
 import com.travis.parser.ProjectCommand;
-import com.travis.parser.TrvaisYamlFileParser;
+import com.travis.parser.TravisYamlFileParser;
 import com.travis.task.TaskAnalyzer;
 import com.travis.task.ToolAdoption;
 import com.travisdiff.DecorateJSonTree;
@@ -74,7 +74,7 @@ public class MainClass {
 
 		} 
 		else if (inputid == 2) {
-			TrvaisYamlFileParser parser = new TrvaisYamlFileParser();
+			TravisYamlFileParser parser = new TravisYamlFileParser();
 			CmdClustering cmdcluster = new CmdClustering();
 
 			try {				
@@ -303,7 +303,7 @@ public class MainClass {
 			TravisCIDiffGenMngr diffmngr = new TravisCIDiffGenMngr();
 			diffmngr.generateTravisCIFailFixChangeDataStat();
 		} else if (inputid == 10) {
-			TrvaisYamlFileParser fileparser = new TrvaisYamlFileParser();
+			TravisYamlFileParser fileparser = new TravisYamlFileParser();
 
 			LinkedHashMap<String, Integer> blocksstat = fileparser.getProjectBlockStatus();
 
@@ -317,7 +317,7 @@ public class MainClass {
 			TaskAnalyzer analyzer = new TaskAnalyzer();
 			List<ToolAdoption> tooladoplist = analyzer.getTravisToolAdoptionWithType();
 		} else if (inputid == 12) {
-			TrvaisYamlFileParser parser = new TrvaisYamlFileParser();
+			TravisYamlFileParser parser = new TravisYamlFileParser();
 			CmdClustering cmdcluster = new CmdClustering();
 
 			try {				
@@ -500,7 +500,7 @@ public class MainClass {
 			
 		}else if(inputid == 15) { //temporary testing task
 			//TODO test with more similar files
-			TrvaisYamlFileParser parser = new TrvaisYamlFileParser();
+			TravisYamlFileParser parser = new TravisYamlFileParser();
 			System.out.println(parser.getYamlDiffStr(parser.getYamlDiff("D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\new 59.yml", "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\new 60.yml")));
 		}
 

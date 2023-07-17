@@ -33,9 +33,9 @@ import com.utility.ProjectPropertyAnalyzer;
 
 import edu.util.fileprocess.TextFileReaderWriter;
 
-public class TrvaisYamlFileParser {
+public class TravisYamlFileParser {
 
-	public TrvaisYamlFileParser() {
+	public TravisYamlFileParser() {
 
 	}
 	
