@@ -2,9 +2,12 @@ package com.build.commitanalyzer;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.assimbly.docconverter.DocConverter;
@@ -15,6 +18,7 @@ import org.eclipse.jgit.api.errors.InvalidRefNameException;
 import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
 import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffEntry.ChangeType;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
@@ -51,6 +55,7 @@ import com.github.gumtreediff.actions.EditScript;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.gen.SyntaxException;
+import com.python.parser.PythonFileParser;
 import com.travis.parser.TravisYamlFileParser;
 import com.travis.parser.TravisYamlFileParser.EditResults;
 import com.travisdiff.TravisCIDiffGenerator;
@@ -345,7 +350,7 @@ public class CommitAnalyzer {
 		return fixcommit;
 	}
 
-	public EditResults getYamlFileChangeAST(String commitid, String fileName) {
+	public TravisYamlFileParser.EditResults getYamlFileChangeAST(String commitid, String fileName) {
 		try (DiffFormatter df = new DiffFormatter(System.out)) {
 			ObjectId objectid1 = repository.resolve(commitid);
 			if (objectid1 == null) { //invalid id
@@ -363,11 +368,17 @@ public class CommitAnalyzer {
 					return null;
 				oldTree = oldCommit.getTree(); //the previous commit's file tree
 			}
+			String newTravisContent, oldTravisContent;
+			try{
+				newTravisContent = this.getStringFile(newTree, fileName);
+				//System.out.println("New travis:\n" + newTravisContent + "\n");
+				oldTravisContent = this.getStringFile(oldTree, fileName);
+				//System.out.println("Old travis:\n" + oldTravisContent + "\n");
+			}catch(IOException | IllegalStateException e){
+				System.out.println("YAML file not found");
+				return null;
+			}
 			
-			String newTravisContent = this.getStringFile(newTree, fileName);
-			System.out.println("New travis:\n" + newTravisContent + "\n");
-			String oldTravisContent = this.getStringFile(oldTree, fileName);
-			System.out.println("Old travis:\n" + oldTravisContent + "\n");
 			
 			//TODO Fix up yaml to match the more strict format this parser uses
 			/* This appears to be considered valid by travis, but not the code:
@@ -388,9 +399,73 @@ public class CommitAnalyzer {
 				System.out.println("Yaml doesn't match format!");
 				return null;
 			}
-			new File(newFilePath).delete();
-			new File(oldFilePath).delete();
+			Files.delete(Path.of(oldFilePath));
+			Files.delete(Path.of(newFilePath));
 			return results;
+		}catch(Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	//TODO filter better. Currently uses all python files in the commit
+	public PythonFileParser.EditResults[] getPythonDiffAST(String commitid) {
+		try (DiffFormatter df = new DiffFormatter(System.out)) {
+			ObjectId objectid1 = repository.resolve(commitid);
+			if (objectid1 == null) { //invalid id
+				return null;
+			}
+			RevTree newTree = getTree(commitid); //the current file tree
+			if(newTree == null) {
+				return null;
+			}
+			RevCommit newCommit = rw.parseCommit(objectid1);
+			RevTree oldTree = null;
+			if(newCommit.getParentCount() > 0) { //don't try to get parent of initial commit
+				RevCommit oldCommit = rw.parseCommit(newCommit.getParent(0).getId());
+				if(oldCommit == null) //no parent to compare to
+					return null;
+				oldTree = oldCommit.getTree(); //the previous commit's file tree
+			}
+			List<PythonFileParser.EditResults> resultList = new LinkedList<>();
+			try(ObjectReader reader = git.getRepository().newObjectReader()) {
+				AbstractTreeIterator oldTreeIter = newCommit.getParentCount() > 0 ? new CanonicalTreeParser(null, reader, oldTree.getId()) : new EmptyTreeIterator();
+				df.setReader(reader, new org.eclipse.jgit.lib.Config());
+				List<DiffEntry> diffList = git.diff().setOldTree(oldTreeIter)
+							.setNewTree(new CanonicalTreeParser(null, reader, newTree.getId())).call();
+				List<String> checkedFiles = new LinkedList<>();
+				for(DiffEntry diff : diffList) {
+					if(diff.getNewPath().endsWith(".py") || diff.getOldPath().endsWith(".py")) { //TODO filter better?
+						String newVersion = "", oldVersion = "";
+						String pathName = diff.getOldPath();
+						if(checkedFiles.contains(pathName))
+							continue; //do not check the same file twice
+						checkedFiles.add(pathName);
+						if(diff.getChangeType() != ChangeType.DELETE) { //if deleted, file no longer exists and empty string should be used
+							newVersion = getStringFile(newTree, diff.getNewPath());
+							pathName = diff.getNewPath();
+						}
+						System.out.println("Comparing versions of " + pathName);
+						if(diff.getChangeType() != ChangeType.ADD) { //if file added, the file didn't exist before and empty string should be used
+							oldVersion = getStringFile(oldTree, diff.getOldPath());
+						}
+						//Store in temp files
+						final String newFilePath = Config.rootDir + "Project_Data\\new_python.py", oldFilePath = Config.rootDir + "Project_Data\\old_python.py";
+						DocConverter.convertStringToFile(oldFilePath, oldVersion);
+						DocConverter.convertStringToFile(newFilePath, newVersion);
+						PythonFileParser parser = new PythonFileParser();
+						PythonFileParser.EditResults results = parser.getPythonDiff(oldFilePath, newFilePath, pathName);
+						Files.delete(Path.of(oldFilePath));
+						Files.delete(Path.of(newFilePath));
+						resultList.add(results);
+					}
+				}
+				return resultList.toArray(new PythonFileParser.EditResults[resultList.size()]);
+			}
+			
+			
+			
 		}catch(Exception e) {
 			System.out.println(e.getMessage());
 			e.printStackTrace();

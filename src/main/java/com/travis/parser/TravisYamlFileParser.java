@@ -70,7 +70,7 @@ public class TravisYamlFileParser {
 	/**Serializes a yaml diff, as returned by getYamlDiff. Format is as follows for a particular update and an addition:<br><br>
 	 * 
 	 * ['update-node:{editedType1 [edit1Start,edit1End], editedType2 [edit2Start,edit2End]}->{editedType1 [edit1Start, edit1NewEnd], editedType2 [edit2Start,edit2End]}','insert-tree:{}->{editType3 [edit3Start,edit3End]}']*/
-	public String getYamlDiffStr(EditResults results) {		
+	public String getYamlDiffStr(EditResults results) {
 		int i = 0;
 		Pattern newlineDetect = Pattern.compile("\r?\n\t* *"); //detect yaml newlines, which can be followed by whitespace for indentation
 		StringBuilder sb = new StringBuilder("['");

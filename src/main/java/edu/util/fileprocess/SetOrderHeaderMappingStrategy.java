@@ -284,7 +284,7 @@ public class SetOrderHeaderMappingStrategy<T> implements MappingStrategy<T> {
             // guaranteed to be as flexible with column order as opencsv,
             // make the column ordering deterministic by sorting the column
             // headers alphabetically.
-            SortedSet<String> set = new TreeSet(fieldMap.keySet());
+            SortedSet<String> set = new TreeSet<>(fieldMap.keySet());
             header = set.toArray(new String[fieldMap.size()]);
         }
         // Clone so no one has direct access to internal data structures

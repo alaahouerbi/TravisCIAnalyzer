@@ -25,11 +25,11 @@ import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.ITree;
+import com.python.parser.PythonFileParser;
 import com.travis.parser.CmdClustering;
 import com.travis.parser.CommandFrequency;
 import com.travis.parser.ProjectCommand;
 import com.travis.parser.TravisYamlFileParser;
-import com.travis.parser.TravisYamlFileParser.EditResults;
 import com.travis.task.TaskAnalyzer;
 import com.travis.task.ToolAdoption;
 import com.travisdiff.DecorateJSonTree;
@@ -437,23 +437,39 @@ public class MainClass {
 			System.out.println("Post-print new test");
 		}
 		else if(inputid == 14) {
-			//testing with the CI analyzer product
-			/*try {
-				String projectUrl = "https://github.com/alaahouerbi/TravisCIAnalyzer.git";
-				CommitAnalyzer analyzer = new CommitAnalyzer("test", ProjectPropertyAnalyzer.getProjName(projectUrl), 
-						new File("D:\\Other\\Git Repos\\TravisCIAnalyzer\\.git"));
-				//using commit "bugfix"
-				int[] result = analyzer.getLoCChange("1cadaa794f19bef945409f5318d4e9fa729ee3cf");
-				System.out.println(Arrays.toString(result));
-			} catch (Exception e) {
+			//PythonParser must be installed for this
+			if(!System.getenv("PATH").contains("pythonparser")) {
+				if(System.getProperty("gt.pp.path") == null) {
+					System.err.println("Python parser not included in -Dgp.pp.path= argument or PATH system environment variable! Cannot analyze python ML projects");
+					return;
+				}
+				System.out.println(System.getProperty("gt.pp.path"));
+				String s = System.getProperty("gt.pp.path");
+				File f = new File(s.startsWith("\"") ? s.substring(1, s.length()-1) : s); //trim quotes or this is workingDir\"pythonParserAbsolutePath"
+				if(!f.exists()) {
+					System.err.println("PythonParser not on PATH, and not installed at the specified location!");
+					System.err.println(f.getAbsolutePath());
+					return;
+				}
+			}
+			
+			//Clean up the temp files from possible interrupted runs
+			try {
+				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "new_python.py"));
+				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "old_python.py"));
+				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "new_travis.yml"));
+				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "new_travis.yml"));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			*/
+			
 			String csvPath = Config.rootDir + "Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
 			String outputPath = Config.rootDir + "Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
 			CSVReaderWriter readWrite = new CSVReaderWriter();
 			try {
 				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
+				PythonFileParser pyParser = new PythonFileParser();
 				for(MLCommitDiffInfo diffInfo : diffInfos) {
 					boolean travisModified = false;
 					loop: for(String name : diffInfo.getModifiedFiles()) { //check for travis change
@@ -485,11 +501,28 @@ public class MainClass {
 							diffInfo.setLinesModified(result[2]);
 							System.out.println(projName + " " + Arrays.toString(result));
 						}
-						
-						EditResults results = analyzer.getYamlFileChangeAST(diffInfo.getCommitID(), ".travis.yml");
-						if(results != null) {
-							String astStr = new TravisYamlFileParser().getYamlDiffStr(results);
-							diffInfo.setTravisAstDiffStr(astStr);
+						if(result != null && result[2] != 0) {
+							TravisYamlFileParser.EditResults results = analyzer.getYamlFileChangeAST(diffInfo.getCommitID(), ".travis.yml");
+							if(results != null) {
+								String astStr = new TravisYamlFileParser().getYamlDiffStr(results);
+								diffInfo.setTravisAstDiffStr(astStr);
+							}
+						}
+						PythonFileParser.EditResults[] pyResults = analyzer.getPythonDiffAST(diffInfo.getCommitID());
+						if(pyResults != null) {
+							//Combine all the strings into another parsable format
+							//For now it's ['firstFileStr','secondFileStr']
+							StringBuilder sb = new StringBuilder("['");
+							for(int i = 0; i < pyResults.length; i++) {
+								if(i != 0) {
+									sb.append("','");
+								}
+								sb.append(pyParser.getPythonDiffString(pyResults[i]));
+							}
+							sb.append("']");
+							diffInfo.setPythonAstDiffStr(sb.toString());
+						}else {
+							System.out.println("Results were null");
 						}
 					}
 				}

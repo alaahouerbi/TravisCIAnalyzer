@@ -33,6 +33,9 @@ public class MLCommitDiffInfo {
 	@CsvBindByPosition(position = 8, required = false)
 	@CsvBindByName(column = "TravisASTDiff", required = false)
 	private String travisAstDiffStr;
+	@CsvBindByPosition(position = 9, required = false)
+	@CsvBindByName(column = "PythonASTDiff", required = false)
+	private String pythonAstDiffStr;
 	
 	public String getGitAuthor() {
 		return gitAuthor;
@@ -104,5 +107,13 @@ public class MLCommitDiffInfo {
 	
 	public void setTravisAstDiffStr(String travisAstDiffStr) {
 		this.travisAstDiffStr = travisAstDiffStr;
+	}
+	
+	public String getPythonAstDiffStr() {
+		return pythonAstDiffStr;
+	}
+	
+	public void setPythonAstDiffStr(String pythonAstDiffStr) {
+		this.pythonAstDiffStr = pythonAstDiffStr;
 	}
 }
