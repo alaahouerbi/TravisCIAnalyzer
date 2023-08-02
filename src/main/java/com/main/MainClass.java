@@ -482,7 +482,8 @@ public class MainClass {
 						String projName = diffInfo.getProjName();
 						String projUrl = "https://github.com/" + projName + ".git";
 						String projFolderName = projName.substring(projName.indexOf("/") + 1);
-						CommitAnalyzer analyzer = new CommitAnalyzer("test", projFolderName, projUrl);
+						String projAuthorName = projName.substring(0, projName.indexOf("/")); //don't remember why I used "test" as the project author name
+						CommitAnalyzer analyzer = new CommitAnalyzer(projAuthorName, projFolderName, projUrl);
 						File file = CommitAnalyzer.getCloneLocation(projFolderName);
 						if(!file.exists()) {
 							System.out.println("Starting clone to " + file.getAbsolutePath());

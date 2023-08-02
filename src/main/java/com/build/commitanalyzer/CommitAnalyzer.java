@@ -436,38 +436,64 @@ public class CommitAnalyzer {
 							.setNewTree(new CanonicalTreeParser(null, reader, newTree.getId())).call();
 				List<String> checkedFiles = new LinkedList<>();
 				for(DiffEntry diff : diffList) {
-					if(diff.getNewPath().endsWith(".py") || diff.getOldPath().endsWith(".py")) { //TODO filter better?
-						String newVersion = "", oldVersion = "";
-						String pathName = diff.getOldPath();
-						if(checkedFiles.contains(pathName))
-							continue; //do not check the same file twice
-						checkedFiles.add(pathName);
-						if(diff.getChangeType() != ChangeType.DELETE) { //if deleted, file no longer exists and empty string should be used
-							newVersion = getStringFile(newTree, diff.getNewPath());
-							pathName = diff.getNewPath();
+					try {
+						if(diff.getNewPath().endsWith(".py") || diff.getOldPath().endsWith(".py")) { //TODO filter better?
+							String newVersion = "", oldVersion = "";
+							String pathName = diff.getOldPath();
+							if(checkedFiles.contains(pathName))
+								continue; //do not check the same file twice
+							checkedFiles.add(pathName);
+							if(diff.getChangeType() != ChangeType.DELETE) { //if deleted, file no longer exists and empty string should be used
+								newVersion = getStringFile(newTree, diff.getNewPath());
+								pathName = diff.getNewPath();
+							}
+							System.out.println("Comparing versions of " + pathName);
+							if(diff.getChangeType() != ChangeType.ADD) { //if file added, the file didn't exist before and empty string should be used
+								oldVersion = getStringFile(oldTree, diff.getOldPath());
+							}
+							
+							String newCachePath = Config.rootDir + "\\FileCache\\py\\new\\" + this.projectOwner + "\\" +
+										this.project + "\\" + commitid + "\\" + pathName;
+							String oldCachePath = Config.rootDir + "\\FileCache\\py\\old\\" + this.projectOwner + "\\" + 
+										this.project + "\\" + commitid + "\\" + pathName;
+							File newCache = new File(newCachePath);
+							File oldCache = new File(oldCachePath);
+							if(!newCache.exists()) {
+								newCache.getParentFile().mkdirs();
+								DocConverter.convertStringToFile(newCachePath, newVersion);
+							}
+							if(!oldCache.exists()) {
+								oldCache.getParentFile().mkdirs();
+								DocConverter.convertStringToFile(oldCachePath, oldVersion);
+							}
+							
+							//Store in temp files
+							//final String newFilePath = Config.rootDir + "Project_Data\\new_python.py", oldFilePath = Config.rootDir + "Project_Data\\old_python.py";
+							String newFilePath = newCachePath, oldFilePath = oldCachePath;
+							//DocConverter.convertStringToFile(oldFilePath, oldVersion);
+							//DocConverter.convertStringToFile(newFilePath, newVersion);
+							PythonFileParser parser = new PythonFileParser();
+							PythonFileParser.EditResults results = parser.getPythonDiff(oldFilePath, newFilePath, pathName);
+							//Files.delete(Path.of(oldFilePath));
+							//Files.delete(Path.of(newFilePath));
+							resultList.add(results);
 						}
-						System.out.println("Comparing versions of " + pathName);
-						if(diff.getChangeType() != ChangeType.ADD) { //if file added, the file didn't exist before and empty string should be used
-							oldVersion = getStringFile(oldTree, diff.getOldPath());
-						}
-						//Store in temp files
-						final String newFilePath = Config.rootDir + "Project_Data\\new_python.py", oldFilePath = Config.rootDir + "Project_Data\\old_python.py";
-						DocConverter.convertStringToFile(oldFilePath, oldVersion);
-						DocConverter.convertStringToFile(newFilePath, newVersion);
-						PythonFileParser parser = new PythonFileParser();
-						PythonFileParser.EditResults results = parser.getPythonDiff(oldFilePath, newFilePath, pathName);
-						Files.delete(Path.of(oldFilePath));
-						Files.delete(Path.of(newFilePath));
-						resultList.add(results);
+					}catch(Exception e) {
+						if(e instanceof SyntaxException)
+							System.out.println("Syntax error");
+						e.printStackTrace();
 					}
 				}
 				return resultList.toArray(new PythonFileParser.EditResults[resultList.size()]);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (GitAPIException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
 			}
-			
-			
-			
-		}catch(Exception e) {
-			System.out.println(e.getMessage());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
