@@ -2,13 +2,14 @@ package com.travis.parser;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import org.assimbly.docconverter.DocConverter;
 
@@ -19,12 +20,13 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.github.gumtreediff.actions.EditScript;
 import com.github.gumtreediff.actions.EditScriptGenerator;
 import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
-import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.client.Run;
+import com.github.gumtreediff.io.ActionsIoUtils;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.TreeContext;
 import com.travis.task.DeploymentTask;
 import com.travis.task.ProjectCommands;
 import com.unity.entity.PerfFixData;
@@ -36,27 +38,30 @@ import edu.util.fileprocess.TextFileReaderWriter;
 public class TravisYamlFileParser {
 
 	public TravisYamlFileParser() {
-
+		Run.initGenerators();
 	}
 	
 	/**Used to be able to return both the editscript and the mappings from a function*/
 	public class EditResults{
 		public final EditScript edits;
 		public final MappingStore mappings;
+		public final TreeContext ctx;
 		
-		public EditResults(EditScript edits, MappingStore mappings) {
+		public EditResults(EditScript edits, MappingStore mappings, TreeContext ctx) {
 			this.edits = edits;
 			this.mappings = mappings;
+			this.ctx = ctx;
 		}
 	}
 	
-	public EditResults getYamlDiff(String beforePath, String afterPath) {
-		Run.initGenerators();
+	public EditResults getYamlDiff(String before, String after) {
 		EditScript edits = null;
 		MappingStore mappings = null;
+		TreeContext ctx = null;
 		try {
-			ITree tree1 = new YamlTreeGenerator().generateFrom().file(beforePath).getRoot();
-			ITree tree2 = new YamlTreeGenerator().generateFrom().file(afterPath).getRoot();
+			ctx = new YamlTreeGenerator().generate(new StringReader(before));
+			ITree tree1 = new YamlTreeGenerator().generateFrom().string(before).getRoot();
+			ITree tree2 = new YamlTreeGenerator().generateFrom().string(after).getRoot();
 			Matcher matcher = Matchers.getInstance().getMatcher();
 			mappings = matcher.match(tree1, tree2);
 			EditScriptGenerator scriptGen = new SimplifiedChawatheScriptGenerator();
@@ -64,13 +69,20 @@ public class TravisYamlFileParser {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return new EditResults(edits, mappings);
+		return new EditResults(edits, mappings, ctx);
 	}
 	
-	/**Serializes a yaml diff, as returned by getYamlDiff. Format is as follows for a particular update and an addition:<br><br>
-	 * 
-	 * ['update-node:{editedType1 [edit1Start,edit1End], editedType2 [edit2Start,edit2End]}->{editedType1 [edit1Start, edit1NewEnd], editedType2 [edit2Start,edit2End]}','insert-tree:{}->{editType3 [edit3Start,edit3End]}']*/
-	public String getYamlDiffStr(EditResults results) {
+	/**Serializes a yaml diff, as returned by getYamlDiff. Format is the Gumtree JSON format*/
+	public static String getYamlDiffStr(EditResults results) {
+		try {
+			StringWriter sw = new StringWriter();
+			ActionsIoUtils.toJson(results.ctx, results.edits, results.mappings).writeTo(sw);
+			return sw.toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "";
+		}
+		/*
 		int i = 0;
 		Pattern newlineDetect = Pattern.compile("\r?\n\t* *"); //detect yaml newlines, which can be followed by whitespace for indentation
 		StringBuilder sb = new StringBuilder("['");
@@ -106,6 +118,7 @@ public class TravisYamlFileParser {
 		sb.append("']");
 		System.out.println(sb.toString());
 		return sb.toString();
+		*/
 	}
 	
 	public String getJsonDataFromYamlFile(String filepath) throws Exception {

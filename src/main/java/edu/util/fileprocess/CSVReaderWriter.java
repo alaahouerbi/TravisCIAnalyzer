@@ -178,7 +178,7 @@ public class CSVReaderWriter {
 			HeaderColumnNameMappingStrategy<PerfFixData> strategy = new HeaderColumnNameMappingStrategy<>();
 			strategy.setType(PerfFixData.class);
 
-			CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(PerfFixData.class).withMappingStrategy(strategy)
+			CsvToBean<PerfFixData> csvToBean = new CsvToBeanBuilder<PerfFixData>(br).withType(PerfFixData.class).withMappingStrategy(strategy)
 					.withIgnoreLeadingWhiteSpace(true).build();
 
 			data = csvToBean.parse();
@@ -199,7 +199,7 @@ public class CSVReaderWriter {
 			HeaderColumnNameMappingStrategy<CommandType> strategy = new HeaderColumnNameMappingStrategy<>();
 			strategy.setType(CommandType.class);
 
-			CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(CommandType.class).withMappingStrategy(strategy)
+			CsvToBean<CommandType> csvToBean = new CsvToBeanBuilder<CommandType>(br).withType(CommandType.class).withMappingStrategy(strategy)
 					.withIgnoreLeadingWhiteSpace(true).build();
 
 			data = csvToBean.parse();
@@ -221,9 +221,8 @@ public class CSVReaderWriter {
 
 			strategy.setType(MLCommitDiffInfo.class);
 			
-			CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(MLCommitDiffInfo.class).withMappingStrategy(strategy)
-					.withIgnoreLeadingWhiteSpace(true).withFilter(new CsvToBeanFilter() {
-
+			CsvToBean<MLCommitDiffInfo> csvToBean = new CsvToBeanBuilder<MLCommitDiffInfo>(br).withType(MLCommitDiffInfo.class)
+					.withMappingStrategy(strategy).withIgnoreLeadingWhiteSpace(true).withFilter(new CsvToBeanFilter() {
 						@Override
 						public boolean allowLine(String[] line) {
 							for (String one : line) {
@@ -243,7 +242,8 @@ public class CSVReaderWriter {
 		return data;
 	}
 	
-	/**Input data is not actually processed here, only used to extract header for mapping strategy*/
+	/**Input data is not actually processed here, only used to extract header for mapping strategy.<br><br>
+	 * When reading the outputted data, the quote character escaped with another quote. This is a standard for CSV, though Excel seems to not support it.*/
 	public void writeMLDiffBeanToFile(List<MLCommitDiffInfo> fixdata, String outputDataPath)
 			throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException {
 
@@ -256,7 +256,7 @@ public class CSVReaderWriter {
 			SetOrderHeaderMappingStrategy<MLCommitDiffInfo> strategy = new SetOrderHeaderMappingStrategy<>(MLCommitDiffInfo.class);
 			System.out.println(strategy.generateHeader());
 			
-			StatefulBeanToCsvBuilder<MLCommitDiffInfo> builder = new StatefulBeanToCsvBuilder<MLCommitDiffInfo>(writer);
+			StatefulBeanToCsvBuilder<MLCommitDiffInfo> builder = new StatefulBeanToCsvBuilder<MLCommitDiffInfo>(writer).withEscapechar('"');
 			StatefulBeanToCsv<MLCommitDiffInfo> beanWriter = builder.withMappingStrategy(strategy).build();
 
 			beanWriter.write(fixdata);
@@ -326,7 +326,7 @@ public class CSVReaderWriter {
 			HeaderColumnNameMappingStrategy<T> strategy = new HeaderColumnNameMappingStrategy<>();
 			strategy.setType(neededClass);
 
-			CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(neededClass).withMappingStrategy(strategy)
+			CsvToBean<T> csvToBean = new CsvToBeanBuilder<T>(br).withType(neededClass).withMappingStrategy(strategy)
 					.withIgnoreLeadingWhiteSpace(true).build();
 
 			data = csvToBean.parse();
@@ -350,7 +350,7 @@ public class CSVReaderWriter {
 			HeaderColumnNameMappingStrategy<TravisCommitInfo> strategy = new HeaderColumnNameMappingStrategy<>();
 			strategy.setType(TravisCommitInfo.class);
 
-			CsvToBean csvToBean = new CsvToBeanBuilder(br).withType(TravisCommitInfo.class).withMappingStrategy(strategy)
+			CsvToBean<TravisCommitInfo> csvToBean = new CsvToBeanBuilder<TravisCommitInfo>(br).withType(TravisCommitInfo.class).withMappingStrategy(strategy)
 					.withIgnoreLeadingWhiteSpace(true).build();
 
 			data = csvToBean.parse();

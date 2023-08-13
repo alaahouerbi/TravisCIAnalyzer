@@ -12,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Scanner;
 
+import org.assimbly.docconverter.DocConverter;
+
 import com.TravisCIClient.TravisCIFileDownloader;
 import com.build.commitanalyzer.CommitAnalyzer;
 import com.build.commitanalyzer.MLCommitDiffInfo;
@@ -25,6 +27,10 @@ import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.ITree;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.python.parser.PythonFileParser;
 import com.travis.parser.CmdClustering;
 import com.travis.parser.CommandFrequency;
@@ -464,13 +470,26 @@ public class MainClass {
 				e.printStackTrace();
 			}
 			
+			File outputFolder = new File(Config.rootDir + "Project_Data\\Output");
+			if(!outputFolder.exists())
+				outputFolder.mkdirs();
+			
 			String csvPath = Config.rootDir + "Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
-			String outputPath = Config.rootDir + "Project_Data\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
+			String outputPath = outputFolder.getAbsolutePath() + "\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
 			CSVReaderWriter readWrite = new CSVReaderWriter();
 			try {
 				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
 				PythonFileParser pyParser = new PythonFileParser();
+				//Clear log for python AST
+				String pyLogPath = Config.rootDir + "Project_Data" + File.separator + "python_errors.log";
+				File pyLogFile = new File(pyLogPath);
+				if(pyLogFile.exists())
+					pyLogFile.delete();
+				pyLogFile.createNewFile();
+				//Iterate across CSV lines
 				for(MLCommitDiffInfo diffInfo : diffInfos) {
+					String commitOutputFolder = outputFolder.getAbsolutePath() + "\\" + diffInfo.getGitAuthor() + "\\" + diffInfo.getProjName() + "\\" + diffInfo.getCommitID();
+					new File(commitOutputFolder).mkdirs();
 					boolean travisModified = false;
 					loop: for(String name : diffInfo.getModifiedFiles()) { //check for travis change
 						if(name.contains(".travis.yml")) {
@@ -505,23 +524,32 @@ public class MainClass {
 						if(result != null && result[2] != 0) {
 							TravisYamlFileParser.EditResults results = analyzer.getYamlFileChangeAST(diffInfo.getCommitID(), ".travis.yml");
 							if(results != null) {
-								String astStr = new TravisYamlFileParser().getYamlDiffStr(results);
-								diffInfo.setTravisAstDiffStr(astStr);
+								String astStr = TravisYamlFileParser.getYamlDiffStr(results);
+								Gson gson = new GsonBuilder().create();
+								String miniJson = gson.toJson(gson.fromJson(astStr, JsonElement.class)); //minified json string
+								String travisOutputPath = commitOutputFolder + "\\travis_diff.json";
+								diffInfo.setTravisAstDiffStr(travisOutputPath);
+								DocConverter.convertStringToFile(travisOutputPath, miniJson);
 							}
 						}
+						//Python AST
 						PythonFileParser.EditResults[] pyResults = analyzer.getPythonDiffAST(diffInfo.getCommitID());
 						if(pyResults != null) {
-							//Combine all the strings into another parsable format
-							//For now it's ['firstFileStr','secondFileStr']
-							StringBuilder sb = new StringBuilder("['");
+							//Put all the file results into one object
+							GsonBuilder gsonB = new GsonBuilder();
+							Gson gson = gsonB.create();
+							JsonObject jsonObj = new JsonObject(); //use to take in the json for each tree, put them together, and write to a string
 							for(int i = 0; i < pyResults.length; i++) {
-								if(i != 0) {
-									sb.append("','");
-								}
-								sb.append(pyParser.getPythonDiffString(pyResults[i]));
+								String jsonStr = PythonFileParser.getPythonDiffString(pyResults[i]);
+								jsonObj.add(pyResults[i].fileName, gson.fromJson(jsonStr, JsonElement.class));
 							}
-							sb.append("']");
-							diffInfo.setPythonAstDiffStr(sb.toString());
+							//System.out.println("Json:");
+							//System.out.println(jsonObj.toString());
+							String miniJson = gson.toJson(jsonObj);
+							String pythonOutputPath = commitOutputFolder + "\\python_diff.json";
+							diffInfo.setPythonAstDiffStr(pythonOutputPath);
+							DocConverter.convertStringToFile(pythonOutputPath, miniJson);
+							
 						}else {
 							System.out.println("Results were null");
 						}
@@ -537,9 +565,10 @@ public class MainClass {
 			}
 			
 		}else if(inputid == 15) { //temporary testing task
-			//TODO test with more similar files
-			TravisYamlFileParser parser = new TravisYamlFileParser();
-			System.out.println(parser.getYamlDiffStr(parser.getYamlDiff("D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\new 59.yml", "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\new 60.yml")));
+			GsonBuilder gsonB = new GsonBuilder();
+			Gson gson = gsonB.create();
+			String jsonStr = "{\"test\":[1,2,3]}";
+			System.out.println(gson.toJson(gson.fromJson(jsonStr, JsonElement.class)));
 		}
 
 	}

@@ -1,14 +1,19 @@
 package com.build.commitanalyzer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.assimbly.docconverter.DocConverter;
 import org.eclipse.jgit.api.Git;
@@ -21,8 +26,10 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffEntry.ChangeType;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.errors.RevisionSyntaxException;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
@@ -368,11 +375,12 @@ public class CommitAnalyzer {
 					return null;
 				oldTree = oldCommit.getTree(); //the previous commit's file tree
 			}
-			String newTravisContent, oldTravisContent;
+			String newTravisContent, oldTravisContent = "";
 			try{
 				newTravisContent = this.getStringFile(newTree, fileName);
 				//System.out.println("New travis:\n" + newTravisContent + "\n");
-				oldTravisContent = this.getStringFile(oldTree, fileName);
+				if(oldTree != null)
+					oldTravisContent = this.getStringFile(oldTree, fileName);
 				//System.out.println("Old travis:\n" + oldTravisContent + "\n");
 			}catch(IOException | IllegalStateException e){
 				System.out.println("YAML file not found");
@@ -386,117 +394,136 @@ public class CommitAnalyzer {
 			 *     - bar:
 			 *     baz:
 			 */
-			
-			//locations of temporary files
-			final String newFilePath =  Config.rootDir + "Project_Data\\new_travis.yml", oldFilePath =  Config.rootDir + "Project_Data\\old_travis.yml";
-			DocConverter.convertStringToFile(newFilePath, newTravisContent); //create temp travis files
-			DocConverter.convertStringToFile(oldFilePath, oldTravisContent);
+
 			TravisYamlFileParser parser = new TravisYamlFileParser();
 			EditResults results;
 			try{
-				results = parser.getYamlDiff(oldFilePath, newFilePath);
+				results = parser.getYamlDiff(oldTravisContent, newTravisContent);
 			}catch(SyntaxException syn) {
 				System.out.println("Yaml doesn't match format!");
 				return null;
 			}
-			Files.delete(Path.of(oldFilePath));
-			Files.delete(Path.of(newFilePath));
 			return results;
-		}catch(Exception e) {
-			System.out.println(e.getMessage());
-			e.printStackTrace();
+		} catch (RevisionSyntaxException e1) {
+			e1.printStackTrace();
+		} catch (AmbiguousObjectException e1) {
+			e1.printStackTrace();
+		} catch (IncorrectObjectTypeException e1) {
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			e1.printStackTrace();
 		}
 		return null;
 	}
 	
+	static final Pattern unicodeFind = Pattern.compile("[^\\p{ASCII}]"); //valid python variable names must match this, and not start with a number. 
+	
+	static final Path logPath = Path.of(Config.rootDir + "Project_Data" + File.separator + "python_errors.log");
+
+	
 	//TODO filter better. Currently uses all python files in the commit
 	public PythonFileParser.EditResults[] getPythonDiffAST(String commitid) {
+		//StringBuilder log = new StringBuilder("Erroring files in commit: ");
 		try (DiffFormatter df = new DiffFormatter(System.out)) {
-			ObjectId objectid1 = repository.resolve(commitid);
-			if (objectid1 == null) { //invalid id
-				return null;
-			}
-			RevTree newTree = getTree(commitid); //the current file tree
-			if(newTree == null) {
-				return null;
-			}
-			RevCommit newCommit = rw.parseCommit(objectid1);
-			RevTree oldTree = null;
-			if(newCommit.getParentCount() > 0) { //don't try to get parent of initial commit
-				RevCommit oldCommit = rw.parseCommit(newCommit.getParent(0).getId());
-				if(oldCommit == null) //no parent to compare to
+			RevCommit newCommit = null;
+			RevTree newTree = null, oldTree = null;
+			try {
+				Files.writeString(logPath, System.lineSeparator() + projectOwner + "/" + project + ":" + commitid + System.lineSeparator(), StandardOpenOption.APPEND);
+				ObjectId objectid1 = repository.resolve(commitid);
+				if (objectid1 == null) { //invalid id
 					return null;
-				oldTree = oldCommit.getTree(); //the previous commit's file tree
+				}
+				newTree = getTree(commitid); //the current file tree
+				if(newTree == null) {
+					return null;
+				}
+				newCommit = rw.parseCommit(objectid1);
+				oldTree = null;
+				if(newCommit.getParentCount() > 0) { //don't try to get parent of initial commit
+					RevCommit oldCommit = rw.parseCommit(newCommit.getParent(0).getId());
+					if(oldCommit == null) //no parent to compare to
+						return null;
+					oldTree = oldCommit.getTree(); //the previous commit's file tree
+				}
+			}catch(IOException e) {
+				e.printStackTrace();
+				return null;
 			}
+			if(oldTree == null)
+				return null; //Initial commit
 			List<PythonFileParser.EditResults> resultList = new LinkedList<>();
 			try(ObjectReader reader = git.getRepository().newObjectReader()) {
-				AbstractTreeIterator oldTreeIter = newCommit.getParentCount() > 0 ? new CanonicalTreeParser(null, reader, oldTree.getId()) : new EmptyTreeIterator();
+				AbstractTreeIterator oldTreeIter = null;
+				try {
+					oldTreeIter = newCommit.getParentCount() > 0 ? new CanonicalTreeParser(null, reader, oldTree.getId()) : new EmptyTreeIterator();
+				} catch (IOException e) {
+					e.printStackTrace();
+					return null;
+				}
 				df.setReader(reader, new org.eclipse.jgit.lib.Config());
-				List<DiffEntry> diffList = git.diff().setOldTree(oldTreeIter)
-							.setNewTree(new CanonicalTreeParser(null, reader, newTree.getId())).call();
+				List<DiffEntry> diffList = null;
+				try {
+					diffList = git.diff().setOldTree(oldTreeIter)
+								.setNewTree(new CanonicalTreeParser(null, reader, newTree.getId())).call();
+				} catch (GitAPIException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					return null;
+				}
 				List<String> checkedFiles = new LinkedList<>();
 				for(DiffEntry diff : diffList) {
-					try {
-						if(diff.getNewPath().endsWith(".py") || diff.getOldPath().endsWith(".py")) { //TODO filter better?
+					if(diff.getNewPath().endsWith(".py") || diff.getOldPath().endsWith(".py")) { //TODO filter better?
+						String pathName = "";
+						try {
 							String newVersion = "", oldVersion = "";
-							String pathName = diff.getOldPath();
+							pathName = diff.getOldPath();
 							if(checkedFiles.contains(pathName))
 								continue; //do not check the same file twice
 							checkedFiles.add(pathName);
 							if(diff.getChangeType() != ChangeType.DELETE) { //if deleted, file no longer exists and empty string should be used
-								newVersion = getStringFile(newTree, diff.getNewPath());
+								try {
+									newVersion = getStringFile(newTree, diff.getNewPath());
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
 								pathName = diff.getNewPath();
 							}
 							System.out.println("Comparing versions of " + pathName);
 							if(diff.getChangeType() != ChangeType.ADD) { //if file added, the file didn't exist before and empty string should be used
-								oldVersion = getStringFile(oldTree, diff.getOldPath());
+								try {
+									oldVersion = getStringFile(oldTree, diff.getOldPath());
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
 							}
-							
-							String newCachePath = Config.rootDir + "\\FileCache\\py\\new\\" + this.projectOwner + "\\" +
-										this.project + "\\" + commitid + "\\" + pathName;
-							String oldCachePath = Config.rootDir + "\\FileCache\\py\\old\\" + this.projectOwner + "\\" + 
-										this.project + "\\" + commitid + "\\" + pathName;
-							File newCache = new File(newCachePath);
-							File oldCache = new File(oldCachePath);
-							if(!newCache.exists()) {
-								newCache.getParentFile().mkdirs();
-								DocConverter.convertStringToFile(newCachePath, newVersion);
-							}
-							if(!oldCache.exists()) {
-								oldCache.getParentFile().mkdirs();
-								DocConverter.convertStringToFile(oldCachePath, oldVersion);
-							}
-							
-							//Store in temp files
-							//final String newFilePath = Config.rootDir + "Project_Data\\new_python.py", oldFilePath = Config.rootDir + "Project_Data\\old_python.py";
-							String newFilePath = newCachePath, oldFilePath = oldCachePath;
-							//DocConverter.convertStringToFile(oldFilePath, oldVersion);
-							//DocConverter.convertStringToFile(newFilePath, newVersion);
+							System.out.println(diff.getChangeType());
+							//unicode errors pythonparser so it needs to be removed and replaced with something interpreted similar enough to not change the syntax
+							newVersion = unicodeFind.matcher(newVersion).replaceAll("?"); //just replace them with ?
+							oldVersion = unicodeFind.matcher(oldVersion).replaceAll("?"); //There are probably better ways but this works
 							PythonFileParser parser = new PythonFileParser();
-							PythonFileParser.EditResults results = parser.getPythonDiff(oldFilePath, newFilePath, pathName);
-							//Files.delete(Path.of(oldFilePath));
-							//Files.delete(Path.of(newFilePath));
+							PythonFileParser.EditResults results = parser.getPythonDiff(oldVersion, newVersion, pathName);
 							resultList.add(results);
+						}catch(RuntimeException e) {
+							System.out.println(pathName);
+							try {
+								Files.writeString(logPath, pathName + System.lineSeparator(), StandardOpenOption.APPEND);
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							if(e instanceof SyntaxException)
+								System.out.println("Syntax error");
+							//Logging for debug purposes
+							e.printStackTrace();
+							continue;
 						}
-					}catch(Exception e) {
-						if(e instanceof SyntaxException)
-							System.out.println("Syntax error");
-						e.printStackTrace();
 					}
 				}
 				return resultList.toArray(new PythonFileParser.EditResults[resultList.size()]);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (GitAPIException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
 			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
-		return null;
 	}
 	
 	/**Returns an int[] containing the lines added, removed, and modified, in that order, between that commit and its first parent, or null if it failed to resolve a commit or errored*/

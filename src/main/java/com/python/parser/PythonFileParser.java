@@ -1,17 +1,25 @@
 package com.python.parser;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.regex.Pattern;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
+import com.config.Config;
 import com.github.gumtreediff.actions.EditScript;
 import com.github.gumtreediff.actions.EditScriptGenerator;
 import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
-import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.client.Run;
+import com.github.gumtreediff.gen.SyntaxException;
+import com.github.gumtreediff.io.ActionsIoUtils;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.TreeContext;
 
 public class PythonFileParser {
 
@@ -20,11 +28,13 @@ public class PythonFileParser {
 		public final EditScript edits;
 		public final MappingStore mappings;
 		public final String fileName;
+		public final TreeContext ctx;
 		
-		public EditResults(String fileName, EditScript edits, MappingStore mappings) {
+		public EditResults(String fileName, EditScript edits, MappingStore mappings, TreeContext beforeContext) {
 			this.fileName = fileName;
 			this.edits = edits;
 			this.mappings = mappings;
+			this.ctx = beforeContext;
 		}
 	}
 	
@@ -32,32 +42,53 @@ public class PythonFileParser {
 		Run.initGenerators();
 	}
 	
-	public EditResults getPythonDiff(String beforePath, String afterPath, String originalFileName) {
+	static final Path logPath = Path.of(Config.rootDir + "Project_Data" + File.separator + "python_errors.log");
+	
+	public EditResults getPythonDiff(String beforeContent, String afterContent, String originalFileName) {
 		Run.initGenerators();
 		EditScript edits = null;
 		MappingStore mappings = null;
-		PatchedPythonTreeGenerator gen1, gen2;
+		TreeContext ctx1 = null;
 		try {
+			PatchedPythonTreeGenerator gen1, gen2;
 			gen1 = new PatchedPythonTreeGenerator();
 			gen2 = new PatchedPythonTreeGenerator();
-			ITree tree1 = gen1.generateFrom().file(beforePath).getRoot();
-			ITree tree2 = gen2.generateFrom().file(afterPath).getRoot();
+			
+			ctx1 = gen1.generate(new StringReader(beforeContent));
+			ITree tree1 = gen1.generateFrom().string(beforeContent).getRoot();
+			ITree tree2 = gen2.generateFrom().string(afterContent).getRoot();
 			Matcher matcher = Matchers.getInstance().getMatcher();
 			mappings = matcher.match(tree1, tree2);
 			EditScriptGenerator scriptGen = new SimplifiedChawatheScriptGenerator();
 			edits = scriptGen.computeActions(mappings);
 		} catch (IOException e) {
 			e.printStackTrace();
+		}catch (SyntaxException e) {
+			System.err.println("Syntax Error");
+			e.printStackTrace();
 		}catch (RuntimeException e) {
 			e.printStackTrace();
+			try {
+				Files.writeString(logPath, originalFileName + System.lineSeparator(), StandardOpenOption.APPEND);
+			} catch (IOException e1) {
+				System.out.println("Failed to write about error");
+				e1.printStackTrace();
+			}
 		}
-		return new EditResults(originalFileName, edits, mappings);
+		return new EditResults(originalFileName, edits, mappings, ctx1);
 	}
 	
-	/**Formats the string in a way similar to TravisYamlFileParser.getYamlDiffStr(), but with an extra file_name: in front of the tag<br>
-	 * Example:<br>
-	 * file_name:['update-node:{editedType1 [edit1Start,edit1End], editedType2 [edit2Start,edit2End]}->{editedType1 [edit1Start, edit1NewEnd], editedType2 [edit2Start,edit2End]}','insert-tree:{}->{editType3 [edit3Start,edit3End]}']*/
-	public String getPythonDiffString(EditResults results) {
+	/**Formats the string into Gumtree's JSON format*/
+	public static String getPythonDiffString(EditResults results) {
+		try {
+			StringWriter sw = new StringWriter();
+			ActionsIoUtils.toJson(results.ctx, results.edits, results.mappings).writeTo(sw);
+			return sw.toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "";
+		}
+		/*
 		int i = 0;
 		Pattern newlineDetect = Pattern.compile("\r?\n\t* *"); //detect yaml newlines, which can be followed by whitespace for indentation
 		StringBuilder sb = new StringBuilder(results.fileName);
@@ -96,5 +127,6 @@ public class PythonFileParser {
 		sb.append("']");
 		System.out.println(sb.toString());
 		return sb.toString();
+		*/
 	}
 }
