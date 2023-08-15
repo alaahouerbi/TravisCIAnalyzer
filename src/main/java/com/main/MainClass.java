@@ -470,12 +470,12 @@ public class MainClass {
 				e.printStackTrace();
 			}
 			
-			File outputFolder = new File(Config.rootDir + "Project_Data\\Output");
+			File outputFolder = new File(Config.rootDir + "Project_Data" + File.separator + "Output");
 			if(!outputFolder.exists())
 				outputFolder.mkdirs();
 			
-			String csvPath = Config.rootDir + "Project_Data\\ML-SampledCommitsFrom-PythonProjects.csv";
-			String outputPath = outputFolder.getAbsolutePath() + "\\ML-SampledCommitsFrom-PythonProjects_Output.csv";
+			String csvPath = Config.rootDir + "Project_Data" + File.separator + "ML-SampledCommitsFrom-PythonProjects.csv";
+			String outputPath = outputFolder.getAbsolutePath() + File.separator + "ML-SampledCommitsFrom-PythonProjects_Output.csv";
 			CSVReaderWriter readWrite = new CSVReaderWriter();
 			try {
 				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
@@ -488,7 +488,7 @@ public class MainClass {
 				pyLogFile.createNewFile();
 				//Iterate across CSV lines
 				for(MLCommitDiffInfo diffInfo : diffInfos) {
-					String commitOutputFolder = outputFolder.getAbsolutePath() + "\\" + diffInfo.getGitAuthor() + "\\" + diffInfo.getProjName() + "\\" + diffInfo.getCommitID();
+					String commitOutputFolder = outputFolder.getAbsolutePath() + File.separator + diffInfo.getProjName().replace("/", File.separator) + File.separator + diffInfo.getCommitID();
 					new File(commitOutputFolder).mkdirs();
 					boolean travisModified = false;
 					loop: for(String name : diffInfo.getModifiedFiles()) { //check for travis change
@@ -525,9 +525,9 @@ public class MainClass {
 							TravisYamlFileParser.EditResults results = analyzer.getYamlFileChangeAST(diffInfo.getCommitID(), ".travis.yml");
 							if(results != null) {
 								String astStr = TravisYamlFileParser.getYamlDiffStr(results);
-								Gson gson = new GsonBuilder().create();
+								Gson gson = new GsonBuilder().setPrettyPrinting().create();
 								String miniJson = gson.toJson(gson.fromJson(astStr, JsonElement.class)); //minified json string
-								String travisOutputPath = commitOutputFolder + "\\travis_diff.json";
+								String travisOutputPath = commitOutputFolder + File.separator + "travis_diff.json";
 								diffInfo.setTravisAstDiffStr(travisOutputPath);
 								DocConverter.convertStringToFile(travisOutputPath, miniJson);
 							}
@@ -535,9 +535,10 @@ public class MainClass {
 						//Python AST
 						PythonFileParser.EditResults[] pyResults = analyzer.getPythonDiffAST(diffInfo.getCommitID());
 						if(pyResults != null) {
+							diffInfo.setPythonFilesChanged(pyResults.length);
 							//Put all the file results into one object
 							GsonBuilder gsonB = new GsonBuilder();
-							Gson gson = gsonB.create();
+							Gson gson = gsonB.setPrettyPrinting().create();
 							JsonObject jsonObj = new JsonObject(); //use to take in the json for each tree, put them together, and write to a string
 							for(int i = 0; i < pyResults.length; i++) {
 								String jsonStr = PythonFileParser.getPythonDiffString(pyResults[i]);
@@ -546,7 +547,7 @@ public class MainClass {
 							//System.out.println("Json:");
 							//System.out.println(jsonObj.toString());
 							String miniJson = gson.toJson(jsonObj);
-							String pythonOutputPath = commitOutputFolder + "\\python_diff.json";
+							String pythonOutputPath = commitOutputFolder + File.separator + "python_diff.json";
 							diffInfo.setPythonAstDiffStr(pythonOutputPath);
 							DocConverter.convertStringToFile(pythonOutputPath, miniJson);
 							

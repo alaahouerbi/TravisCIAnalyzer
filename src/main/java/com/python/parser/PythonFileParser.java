@@ -61,10 +61,23 @@ public class PythonFileParser {
 			mappings = matcher.match(tree1, tree2);
 			EditScriptGenerator scriptGen = new SimplifiedChawatheScriptGenerator();
 			edits = scriptGen.computeActions(mappings);
+			return new EditResults(originalFileName, edits, mappings, ctx1);
 		} catch (IOException e) {
+			try {
+				Files.writeString(logPath, originalFileName + System.lineSeparator(), StandardOpenOption.APPEND);
+			} catch (IOException e1) {
+				System.out.println("Failed to write about error");
+				e1.printStackTrace();
+			}
 			e.printStackTrace();
 		}catch (SyntaxException e) {
 			System.err.println("Syntax Error");
+			try {
+				Files.writeString(logPath, originalFileName + System.lineSeparator(), StandardOpenOption.APPEND);
+			} catch (IOException e1) {
+				System.out.println("Failed to write about error");
+				e1.printStackTrace();
+			}
 			e.printStackTrace();
 		}catch (RuntimeException e) {
 			e.printStackTrace();
@@ -86,47 +99,7 @@ public class PythonFileParser {
 			return sw.toString();
 		} catch (Exception e) {
 			e.printStackTrace();
-			return "";
+			return null;
 		}
-		/*
-		int i = 0;
-		Pattern newlineDetect = Pattern.compile("\r?\n\t* *"); //detect yaml newlines, which can be followed by whitespace for indentation
-		StringBuilder sb = new StringBuilder(results.fileName);
-		sb.append(":['");
-		if(results.edits != null) {
-			for(Action a : results.edits) {
-				if(i++ != 0) {
-					sb.append("','");
-				}
-				sb.append(a.getName().trim());
-				sb.append(":{");
-				String treeStr = a.getNode().toTreeString().trim();
-				treeStr = newlineDetect.matcher(treeStr).replaceAll(", ");
-				if(results.mappings.isSrcMapped(a.getNode()) || a.getName().contains("delet")) //deletions or updates only
-					sb.append(treeStr);
-				sb.append("}->{");
-				ITree mapped = results.mappings.getDstForSrc(a.getNode()); //only non-null for updates and moves
-				String treeStr2 = ""; //should be left as this for deletions
-				if(a.getName().contains("insert")) //addition
-					treeStr2 = treeStr; //addition should be {},{newStuff}
-				if(mapped != null) { //update or move of some sort
-					treeStr2 = mapped.toTreeString().trim();
-					treeStr2 = newlineDetect.matcher(treeStr2).replaceAll(", ");
-				}
-				sb.append(treeStr2);
-				sb.append("}");
-				
-				//System.out.println("Edit number: " + i);
-				//System.out.println("Name: " + a.getName());
-				//System.out.println("Tree:\n" + a.getNode().toTreeString());
-				//System.out.println("\nMapped tree:\n" + (mapped == null ? "Tree empty!" : mapped.toTreeString()));
-				//System.out.println("\n\n");
-				
-			}
-		}
-		sb.append("']");
-		System.out.println(sb.toString());
-		return sb.toString();
-		*/
 	}
 }
