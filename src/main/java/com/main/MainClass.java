@@ -66,13 +66,12 @@ public class MainClass {
 				+ "\n11->RQ2->Build Pattern Analysis"
 				+ "\n12->-----"
 				+ "\n13->Generate Report of Commits"
-				+ "\n14->Compute line of code changes");
+				+ "\n14->Compute Python+Travis ASTs and Travis line-of-code changes");
 
 		Scanner cin = new Scanner(System.in);
 
 		System.out.println("Enter an integer: ");
 		int inputid = cin.nextInt();
-
 		if (inputid == 1) {
 			ProjectLoader projloader = new ProjectLoader();
 			projloader.LoadDownloadProjects();
@@ -443,6 +442,8 @@ public class MainClass {
 			System.out.println("Post-print new test");
 		}
 		else if(inputid == 14) {
+			int pythonFileLimit = 30; //Any commit changing more python files than this will be immediately be skipped
+			
 			//PythonParser must be installed for this
 			if(!System.getenv("PATH").contains("pythonparser")) {
 				if(System.getProperty("gt.pp.path") == null) {
@@ -497,7 +498,20 @@ public class MainClass {
 							break loop;
 						}
 					}
-					if(travisModified) {
+					int pythonFilesModified = 0;
+					for(String fileName : diffInfo.getModifiedFiles()) {
+						if(fileName.endsWith(".py"))
+							pythonFilesModified++;
+						if(pythonFilesModified > pythonFileLimit)
+							break;
+					}
+					if(pythonFilesModified >= pythonFileLimit)
+						System.out.println(diffInfo.getProjName() + ":" + diffInfo.getCommitID() + "; Too many python files: " + pythonFilesModified);
+					if(pythonFilesModified == 0)
+						System.out.println(diffInfo.getProjName() + ":" + diffInfo.getCommitID() + "; No python files modified");
+					if(!travisModified)
+						System.out.println(diffInfo.getProjName() + ":" + diffInfo.getCommitID() + "; travis.yml not modified");
+					if(travisModified && pythonFilesModified > 0 && pythonFilesModified < pythonFileLimit) {
 						String projName = diffInfo.getProjName();
 						String projUrl = "https://github.com/" + projName + ".git";
 						String projFolderName = projName.substring(projName.indexOf("/") + 1);

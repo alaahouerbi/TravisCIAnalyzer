@@ -498,7 +498,7 @@ public class CommitAnalyzer {
 									e.printStackTrace();
 								}
 							}
-							System.out.println(diff.getChangeType());
+							System.out.println(diff.getChangeType() + ": " + pathName);
 							//unicode errors pythonparser so it needs to be removed and replaced with something interpreted similar enough to not change the syntax
 							newVersion = unicodeFind.matcher(newVersion).replaceAll("?"); //just replace them with ?
 							oldVersion = unicodeFind.matcher(oldVersion).replaceAll("?"); //There are probably better ways but this works
