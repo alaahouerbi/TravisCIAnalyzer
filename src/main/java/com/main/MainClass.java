@@ -442,15 +442,20 @@ public class MainClass {
 			System.out.println("Post-print new test");
 		}
 		else if(inputid == 14) {
-			int pythonFileLimit = 30; //Any commit changing more python files than this will be immediately be skipped
+			int pythonFileLimit = Config.maxPythonFiles; //Any commit changing more python files than this will be immediately be skipped
+			//To not remove large commits, simply set to Integer.MAX_VALUE
+			File outputFolder = new File(Config.rootDir + "Output");
+
+			String csvPath = Config.rootDir + "ML-SampledCommitsFrom-PythonProjects.csv";
+			String outputPath = outputFolder.getAbsolutePath() + File.separator + "ML-SampledCommitsFrom-PythonProjects_Output.csv";
 			
 			//PythonParser must be installed for this
 			if(!System.getenv("PATH").contains("pythonparser")) {
 				if(System.getProperty("gt.pp.path") == null) {
-					System.err.println("Python parser not included in -Dgp.pp.path= argument or PATH system environment variable! Cannot analyze python ML projects");
+					System.err.println("Python parser not included in -Dgp.pp.path= argument or PATH system environment variable! Cannot analyze python ML projects.\n"
+							+ "Install Python if needed, and GumTreeDiff\\pythonparser, from GitHub and pass here");
 					return;
 				}
-				System.out.println(System.getProperty("gt.pp.path"));
 				String s = System.getProperty("gt.pp.path");
 				File f = new File(s.startsWith("\"") ? s.substring(1, s.length()-1) : s); //trim quotes or this is workingDir\"pythonParserAbsolutePath"
 				if(!f.exists()) {
@@ -460,29 +465,28 @@ public class MainClass {
 				}
 			}
 			
-			//Clean up the temp files from possible interrupted runs
-			try {
-				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "new_python.py"));
-				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "old_python.py"));
-				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "new_travis.yml"));
-				Files.deleteIfExists(Path.of(Config.rootDir, "Project_Data", "new_travis.yml"));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			File outputFolder = new File(Config.rootDir + "Project_Data" + File.separator + "Output");
 			if(!outputFolder.exists())
 				outputFolder.mkdirs();
 			
-			String csvPath = Config.rootDir + "Project_Data" + File.separator + "ML-SampledCommitsFrom-PythonProjects.csv";
-			String outputPath = outputFolder.getAbsolutePath() + File.separator + "ML-SampledCommitsFrom-PythonProjects_Output.csv";
+			//Clean up the temp files from possible interrupted runs
+			//try {
+			//	Files.deleteIfExists(Path.of(Config.rootDir, "new_python.py"));
+			//	Files.deleteIfExists(Path.of(Config.rootDir, "old_python.py"));
+			//	Files.deleteIfExists(Path.of(Config.rootDir, "new_travis.yml"));
+			//	Files.deleteIfExists(Path.of(Config.rootDir, "new_travis.yml"));
+			//} catch (IOException e) {
+			//	// TODO Auto-generated catch block
+			//	e.printStackTrace();
+			//}
+			
+		
+			
 			CSVReaderWriter readWrite = new CSVReaderWriter();
 			try {
 				List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
 				PythonFileParser pyParser = new PythonFileParser();
 				//Clear log for python AST
-				String pyLogPath = Config.rootDir + "Project_Data" + File.separator + "python_errors.log";
+				String pyLogPath = Config.rootDir + "python_errors.log";
 				File pyLogFile = new File(pyLogPath);
 				if(pyLogFile.exists())
 					pyLogFile.delete();
@@ -515,7 +519,7 @@ public class MainClass {
 						String projName = diffInfo.getProjName();
 						String projUrl = "https://github.com/" + projName + ".git";
 						String projFolderName = projName.substring(projName.indexOf("/") + 1);
-						String projAuthorName = projName.substring(0, projName.indexOf("/")); //don't remember why I used "test" as the project author name
+						String projAuthorName = projName.substring(0, projName.indexOf("/"));
 						CommitAnalyzer analyzer = new CommitAnalyzer(projAuthorName, projFolderName, projUrl);
 						File file = CommitAnalyzer.getCloneLocation(projFolderName);
 						if(!file.exists()) {
@@ -579,11 +583,6 @@ public class MainClass {
 				e.printStackTrace();
 			}
 			
-		}else if(inputid == 15) { //temporary testing task
-			GsonBuilder gsonB = new GsonBuilder();
-			Gson gson = gsonB.create();
-			String jsonStr = "{\"test\":[1,2,3]}";
-			System.out.println(gson.toJson(gson.fromJson(jsonStr, JsonElement.class)));
 		}
 
 	}

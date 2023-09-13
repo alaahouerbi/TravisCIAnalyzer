@@ -42,7 +42,7 @@ public class PythonFileParser {
 		Run.initGenerators();
 	}
 	
-	static final Path logPath = Path.of(Config.rootDir + "Project_Data" + File.separator + "python_errors.log");
+	static final Path logPath = Path.of(Config.rootDir + "python_errors.log");
 	
 	public EditResults getPythonDiff(String beforeContent, String afterContent, String originalFileName) {
 		Run.initGenerators();

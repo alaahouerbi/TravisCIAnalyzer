@@ -418,7 +418,7 @@ public class CommitAnalyzer {
 	
 	static final Pattern unicodeFind = Pattern.compile("[^\\p{ASCII}]"); //valid python variable names must match this, and not start with a number. 
 	
-	static final Path logPath = Path.of(Config.rootDir + "Project_Data" + File.separator + "python_errors.log");
+	static final Path logPath = Path.of(Config.rootDir + "python_errors.log");
 
 	
 	//TODO filter better. Currently uses all python files in the commit
@@ -548,6 +548,7 @@ public class CommitAnalyzer {
 			int totalAdded = 0, totalRemoved = 0, totalModified = 0;
 			
 			try(ObjectReader reader = git.getRepository().newObjectReader()) {
+				//newCommit.getParentCount() == 0 means this is the initial commit, so the old commit has no tree
 				AbstractTreeIterator oldTreeIter = newCommit.getParentCount() > 0 ? new CanonicalTreeParser(null, reader, oldTree.getId()) : new EmptyTreeIterator();
 				df.setReader(reader, new org.eclipse.jgit.lib.Config());
 				List<DiffEntry> diffList = git.diff().setOldTree(oldTreeIter)
@@ -569,38 +570,6 @@ public class CommitAnalyzer {
 				}
 			}
 			return new int[] {totalAdded, totalRemoved, totalModified};
-			
-			/*
-			
-			df.setRepository(repository);
-			df.setDiffComparator(RawTextComparator.DEFAULT);
-			df.setDetectRenames(true);
-			df.setContext(0);
-			List<DiffEntry> diffs = df.scan(oldTree, newTree);
-			for(DiffEntry diff : diffs) {
-				System.out.println(diff.getNewPath());
-				if(diff.getNewPath().contains("README")) {
-					df.format(diff);
-					System.out.println(diff.getNewPath());
-				}
-				for (Edit edit : df.toFileHeader(diff).toEditList()) {
-					if(diff.getNewPath().contains("README")) {
-						System.out.println("Removed: " + (edit.getEndA() - edit.getBeginA()));
-			            System.out.println("Added: " + (edit.getEndB() - edit.getBeginB()));
-					}
-		        }
-				List<? extends HunkHeader> hunks = df.toFileHeader(diff).getHunks();
-				for(HunkHeader hunk : hunks) {
-					OldImage image = hunk.getOldImage();
-					totalLines += image.getLinesAdded() - image.getLinesDeleted();
-					if(diff.getNewPath().contains("README")) {
-						System.out.println(hunk);
-						System.out.println("Added: " + image.getLinesAdded());
-						System.out.println("Removed: " + image.getLinesDeleted());
-					}
-				}
-			}
-			*/
 		}catch(Exception e) {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
@@ -1015,7 +984,7 @@ public class CommitAnalyzer {
 	}
 
 	public static File getCloneLocation(String projectName) {
-		return new File("D:\\Other\\Git Repos\\TravisCIAnalyzer\\Repository\\" + projectName);
+		return new File(Config.repoDir + projectName);
 	}
 	
 	public void cloneRepository(String folderName) {
