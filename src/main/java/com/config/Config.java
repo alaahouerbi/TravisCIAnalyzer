@@ -9,13 +9,13 @@ public class Config {
 
 	 //Set to the project root folder, in wherever your TravisCIAnalyzer is
 	 public static String
-	 rootDir="D:\\Other\\Git Repos\\TravisCIAnalyzer\\Project_Data\\";
+	 rootDir="/home/alaa/Research/Thesis/chris-analysis/";
 	 
 	 //repo dir location for caching repos
-	 public static String repoDir = "D:\\Other\\Git Repos\\TravisCIAnalyzer\\Repository\\";
+	 public static String repoDir = "/home/alaa/Research/Thesis/Alexis-dataset/clonedRepos/";
 	 //
 	 //text file that contains list of projects to analyze
-	 public static String gitProjList=rootDir+"Project_Source.txt";
+	 public static String gitProjList=rootDir+"github_links.txt";
 	 public static String gitProjListNonML=rootDir+"Project_Source_NonML.txt";
 	 public static String gitProjListEval=rootDir+"eval_Project_Source.txt";
 	
@@ -37,7 +37,7 @@ public class Config {
 	 
 	 public static String csvBlockCategory=Config.rootDir+"block_type.csv";
 			 
-	 public static String patchDir=rootDir+"PatchDir\\";
+	 public static String patchDir=rootDir+"PatchDir/";
 
 	public static String[] perfCommitToken = { ".." };
 
@@ -46,7 +46,7 @@ public class Config {
 	
 	/**This value controls the maximum number of files in a commit before the LoC/AST analysis task skips it.<br>
 	 * This can be set to Integer.MAX_VALUE to include all files. Note that doing so will likely make the analysis take substantially longer.*/
-	public static final int maxPythonFiles = 30;
+	public static final int maxPythonFiles = Integer.MAX_VALUE; //was 30
 	
 	/** This token expires at the end of 2023, and should be replaced with a token from whoever is working on this then. 
 	 * 

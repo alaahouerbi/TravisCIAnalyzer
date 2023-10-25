@@ -14,7 +14,7 @@ public class ProjectPropertyAnalyzer {
 		String repoowner=gitrepourl.substring(secondlastindex+1,lastslashindex);		
 		String projname=gitrepourl.substring(lastslashindex+1, indexofdot);
 		
-		String repoprojname=repoowner+"@"+projname;
+		String repoprojname=repoowner+"-"+projname;
 		
 		return repoprojname;		
 	}

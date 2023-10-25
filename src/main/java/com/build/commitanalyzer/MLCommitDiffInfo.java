@@ -39,8 +39,19 @@ public class MLCommitDiffInfo {
 	@CsvBindByPosition(position = 10, required = false)
 	@CsvBindByName(column = "PythonFilesChanged", required = false)
 	private int pythonFilesChanged;
+	@CsvBindByPosition(position=11 ,required=false)
+	@CsvBindByName(column = "failure reason", required=false)
+	private String failureReason;
 	
 	
+	public String getFailureReason() {
+		return failureReason;
+	}
+
+	public void setFailureReason(String failureReason) {
+		this.failureReason = failureReason;
+	}
+
 	public String getGitAuthor() {
 		return gitAuthor;
 	}

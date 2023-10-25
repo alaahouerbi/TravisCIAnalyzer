@@ -134,7 +134,7 @@ public class CommitAnalyzer {
 		this.projectOwner = projectOwner;
 		this.project = project;
 
-		directoryPath = Config.repoDir + project + "\\.git";
+		directoryPath = Config.repoDir + projectOwner+"-"+project + "/.git";
 		System.out.println(directoryPath);
 		commitAnalyzingUtils = new CommitAnalyzingUtils();
 		statsHolder = new DataStatsHolder();
@@ -357,23 +357,23 @@ public class CommitAnalyzer {
 		return fixcommit;
 	}
 
-	public TravisYamlFileParser.EditResults getYamlFileChangeAST(String commitid, String fileName) {
+	public TravisYamlFileParser.EditResults getYamlFileChangeAST(String commitid, String fileName) throws Exception{
 		try (DiffFormatter df = new DiffFormatter(System.out)) {
 			ObjectId objectid1 = repository.resolve(commitid);
 			if (objectid1 == null) { //invalid id
-				return null;
+				throw new Exception("commit did not resolve");
 			}
 			RevTree newTree = getTree(commitid); //the current file tree
 			if(newTree == null) {
-				return null;
+				throw new Exception("cannot access Tree of commit did not resolve");
 			}
 			RevCommit newCommit = rw.parseCommit(objectid1);
 			RevTree oldTree = null;
 			if(newCommit.getParentCount() > 0) { //don't try to get parent of initial commit
 				RevCommit oldCommit = rw.parseCommit(newCommit.getParent(0).getId());
-				if(oldCommit == null) //no parent to compare to
-					return null;
-				oldTree = oldCommit.getTree(); //the previous commit's file tree
+				if(oldCommit != null) { //no parent to compare to
+					oldTree = oldCommit.getTree(); //the previous commit's file tree
+				}
 			}
 			String newTravisContent, oldTravisContent = "";
 			try{
@@ -384,9 +384,9 @@ public class CommitAnalyzer {
 				//System.out.println("Old travis:\n" + oldTravisContent + "\n");
 			}catch(IOException | IllegalStateException e){
 				System.out.println("YAML file not found");
-				return null;
+				throw new Exception("YAML file not found");
 			}
-			
+		
 			
 			//TODO Fix up yaml to match the more strict format this parser uses
 			/* This appears to be considered valid by travis, but not the code:
@@ -401,7 +401,7 @@ public class CommitAnalyzer {
 				results = parser.getYamlDiff(oldTravisContent, newTravisContent);
 			}catch(SyntaxException syn) {
 				System.out.println("Yaml doesn't match format!");
-				return null;
+				throw new Exception("Yaml deosnt match format");
 			}
 			return results;
 		} catch (RevisionSyntaxException e1) {
@@ -716,7 +716,58 @@ public class CommitAnalyzer {
 	/*********************************
 	 * For Travis
 	 ***********************************************************/
+	public EditScript extractTravisFileChangesFromSingleCommit(String commitId) {
+		EditScript actions = null;
+		try {
+				// ObjectId failobjectid = repository.resolve(fID);
+				ObjectId commitObjID = repository.resolve(commitId);
 
+				if (commitObjID == null)
+					return null;
+				RevCommit currentCommitObject = null;
+				RevCommit prevCommitObject= null;
+				currentCommitObject= rw.parseCommit(commitObjID);
+				RevTree currentCommitTree = currentCommitObject.getTree();
+				RevTree prevCommitTree=null;
+				if(currentCommitObject == null ) return null;
+				if(currentCommitObject.getParentCount() > 0) {
+					prevCommitObject=rw.parseCommit(currentCommitObject.getParent(0));
+					prevCommitTree=prevCommitObject.getTree();
+				}
+				
+				DiffFormatter df = commitAnalyzingUtils.setDiffFormatter(repository, true);
+				List<DiffEntry> diffs = df.scan(prevCommitTree, currentCommitTree);
+				for (DiffEntry diff : diffs) {
+					if (diff.getNewPath().endsWith(".travis.yml")) {
+						String currentContent = getFileContentAtCommit(currentCommitObject.getName(), diff);
+						String previousContent = "";
+						if(prevCommitObject!=null) {//case where this is initial commit
+							previousContent = getFileContentAtCommit(prevCommitObject.getName(), diff);
+						}
+						
+
+						String tempcurr = Config.patchDir + "j1.json";
+						String tempprev = Config.patchDir + "j2.json";
+
+						File f1 = commitAnalyzingUtils.writeContentInFile(tempcurr, currentContent);
+						File f2 = commitAnalyzingUtils.writeContentInFile(tempprev, previousContent);
+
+						TravisCIDiffGenerator diffgen = new TravisCIDiffGenerator();
+						actions = diffgen.extractTravisFileChange(f2, f1);
+
+						f1.delete();
+						f2.delete();
+						
+						return actions;
+
+					}
+				}
+			}catch (Exception e) {
+				System.out.println(e.getMessage());
+				return null;
+			}
+		return actions;
+	}
 	public EditScript extractTravisFileChange(String fID, String pID) {
 		// File debug = new File("debug-" + ID + ".txt");
 		EditScript actions = null;
