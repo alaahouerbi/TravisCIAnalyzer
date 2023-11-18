@@ -9,9 +9,11 @@ public class Config {
 
 	 //Set to the project root folder, in wherever your TravisCIAnalyzer is
 	 public static String
-	 rootDir="/home/alaa/Research/Thesis/chris-analysis/";
+	 rootDir="/home/alaa/Research/Thesis/TravisCIAnalyzer/Project_Data/";
 	 
 	 //repo dir location for caching repos
+	 public static String csvCITransitionFile="/home/alaa/Research/Thesis/Alexis-dataset/ML-CommitsFrom-PythonProjects - ML-CommitsFrom-PythonProjects-filtered-from-deleted-projects.csv";
+
 	 public static String repoDir = "/home/alaa/Research/Thesis/Alexis-dataset/clonedRepos/";
 	 //
 	 //text file that contains list of projects to analyze
@@ -35,7 +37,6 @@ public class Config {
 	 public static String csvCmdTypeFile=rootDir+"command_type_new_ML_Non_Ml.csv";
 	 
 	 //public static String csvCITransitionFile=rootDir+"Tool_transition.csv";
-	 public static String csvCITransitionFile="/home/alaa/Research/Thesis/Alexis-dataset/ML-CommitsFrom-PythonProjects - ML-CommitsFrom-PythonProjects-filtered-from-deleted-projects.csv";
 	 
 	 public static String csvBlockCategory=Config.rootDir+"block_type.csv";
 			 

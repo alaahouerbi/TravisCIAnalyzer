@@ -67,10 +67,10 @@ public class TravisCIDiffGenMngr {
 	public void generateTravisCIChangeData() {
 		// CSVReaderWriter csvrw = new CSVReaderWriter();
 		CVSReader csvreader = new CVSReader();
-		String csvPath = Config.rootDir + "debug_commits.csv";
+		String csvPath = Config.csvCITransitionFile;//
 		try {
 			CSVReaderWriter readWrite = new CSVReaderWriter();
-		    File file = new File(Config.rootDir+"debug_map_presence.csv"); 
+		    File file = new File(Config.rootDir+"map_presence.csv"); 
 	        FileWriter outputfile = new FileWriter(file); 
 	        CSVWriter writer = new CSVWriter(outputfile); 
 			List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
@@ -1038,12 +1038,9 @@ public class TravisCIDiffGenMngr {
 
 		TravisCIChangeBlocks changeblocks = new TravisCIChangeBlocks();
 		int id = 1;
-		int count = 0;
-		CSVWriter csvWriter = null;
-		Writer writer = null;
+
 		String[] headers = {"commandPresence","ChangePresence","projectName","commit"};
 		mapPresenceData.add(headers);
-		List<String[]> actionsDebug = new ArrayList<String []>();
 		for (MLCommitDiffInfo entry : mlDiffInfo) {
 			CommitAnalyzer cmtanalyzer = null;
 
@@ -1063,7 +1060,6 @@ public class TravisCIDiffGenMngr {
 				mapPresenceData.add(row);
 
 				if (actions != null) {
-					count++;
 					for (Action action : actions) {
 						ITree treenode = action.getNode();
 						String jsonblock = (String) treenode.getMetadata("json_parent");
@@ -1090,7 +1086,6 @@ public class TravisCIDiffGenMngr {
 						}
 
 						List<String> changecmd = getCmdListFromChange(jsonblock, label);
-			
 						NodeLabelWrapper nodelable = new NodeLabelWrapper(treenode, label, straction, action, changecmd,entry.getCommitID(),entry.getProjName());
 						changeblocks.addItemToMap(jsonblock, nodelable);	
 					}
@@ -1101,7 +1096,6 @@ public class TravisCIDiffGenMngr {
 				e.printStackTrace();
 			}
 		}
-		System.out.println("Total Diffs=" + count);
 		return changeblocks;
 
 	}

@@ -75,7 +75,7 @@ public class MainClass {
 				+ "\n11->RQ2->Build Pattern Analysis"
 				+ "\n12->-----"
 				+ "\n13->Generate Report of Commits"
-				+ "\n14->Compute Travis ASTs and Travis line-of-code changes(RQ3)");
+				+ "\n14->RQ3-->AST analysis");
 
 		Scanner cin = new Scanner(System.in);
 
@@ -451,7 +451,7 @@ public class MainClass {
 			System.out.println("Post-print new test");
 		}
 		else if(inputid == 14) {
-			System.out.println("TravisCI Fix Analysis Statistics");
+			System.out.println("RQ3: AST analysis");
 			TravisCIDiffGenMngr diffmngr = new TravisCIDiffGenMngr();
 			diffmngr.generateTravisCIChangeData();
 		}
