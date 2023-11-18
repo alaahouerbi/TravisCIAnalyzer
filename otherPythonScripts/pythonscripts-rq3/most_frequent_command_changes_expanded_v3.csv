@@ -1,0 +1,200 @@
+"('Tree-Addition', 'python', 'PYTHON-VERSION', '')",1632
+"('Update', 'python', 'PYTHON-VERSION', '')",1116
+"('Tree-Delete', 'python', 'PYTHON-VERSION', '')",854
+"('Tree-Addition', 'language', 'python', '')",539
+"('Insert', 'python', 'PYTHON-VERSION', '')",364
+"('Tree-Addition', 'sudo', 'required', '')",252
+"('Tree-Addition', 'sudo', '', '')",239
+"('Tree-Addition', 'dist', 'trusty', '')",224
+"('Tree-Addition', 'dist', 'xenial', '')",223
+"('Update', 'install', 'install', '')",197
+"('Update', 'install', 'pip', 'install -r requirements.txt')",171
+"('Update', 'python', 'python', '')",170
+"('Tree-Addition', 'cache', 'pip', '')",158
+"('Tree-Addition', 'install', 'install', '')",154
+"('Tree-Addition', 'install', 'pip', 'install -r requirements.txt')",151
+"('Tree-Addition', 'os', 'linux', '')",145
+"('Update', 'env', 'env', '')",140
+"('Tree-Addition', 'after_success', 'coveralls', '')",129
+"('Update', 'dist', 'trusty', '')",122
+"('Update', 'before_install', 'before_install', '')",121
+"('Delete', 'python', 'PYTHON-VERSION', '')",113
+"('Update', 'install', 'python', 'setup.py install')",113
+"('Tree-Addition', 'after_success', 'codecov', '')",110
+"('Tree-Addition', 'os', 'osx', '')",106
+"('Update', 'os', 'os', '')",106
+"('Tree-Addition', 'language', 'generic', '')",105
+"('Tree-Addition', 'services', 'docker', '')",99
+"('Delete', 'sudo', '', '')",91
+"('Tree-Addition', 'notifications', 'email:', '')",90
+"('Tree-Delete', 'sudo', '', '')",90
+"('Tree-Addition', 'python', 'python', '')",85
+"('Update', 'matrix', 'matrix', '')",84
+"('Update', 'os', 'linux', '')",84
+"('Tree-Addition', 'install', 'python', 'setup.py install')",82
+"('Update', 'script', 'script', '')",80
+"('Tree-Addition', 'script', 'pytest', '')",79
+"('Tree-Addition', 'before_install', 'before_install', '')",79
+"('Update', 'install', 'pip', 'install .')",77
+"('Update', 'sudo', 'sudo', '')",77
+"('Update', 'dist', 'xenial', '')",77
+"('Tree-Addition', 'env', 'SKIP_CHAINERX=1', '')",74
+"('Tree-Addition', 'env', 'env', '')",72
+"('Tree-Addition', 'script', 'popd', '')",71
+"('Update', 'script', 'pytest', '')",70
+"('Tree-Addition', 'if', '(branch', '= master OR branch = v3) AND (NOT type in (pull_request))')",69
+"('Update', 'if', '(branch', '= master OR branch = v4) AND (NOT type in (pull_request))')",68
+"('Update', 'dist', 'dist', '')",66
+"('Tree-Delete', 'sudo', 'required', '')",64
+"('Insert', 'sudo', '', '')",62
+"('Tree-Addition', 'branches', 'only:master', '')",54
+"('Tree-Addition', 'install', 'pip', 'install .')",53
+"('Tree-Addition', 'install', 'hash', '-r')",51
+"('Tree-Addition', 'install', 'pip', 'install flake8')",50
+"('Insert', 'os', 'osx', '')",50
+"('Tree-Addition', 'script', 'script', '')",49
+"('Update', 'install', 'pip', 'install coveralls')",49
+"('Tree-Delete', 'dist', 'trusty', '')",49
+"('Update', 'if', '(branch', '= master OR branch = v3) AND (NOT type in (pull_request))')",48
+"('Tree-Addition', 'script', 'tox', '')",48
+"('Tree-Addition', 'install', 'export', 'PATH=\\""$HOME/miniconda/bin:$PATH\\""')",48
+"('Update', 'install', 'pip', 'install -e .')",47
+"('Tree-Addition', 'env', 'CHAINER_TRAVIS_TEST=\\""chainer\\""', '')",46
+"('Tree-Addition', 'install', 'conda', 'config --set always_yes yes --set changeps1 no')",45
+"('Tree-Addition', 'matrix', 'matrix', '')",45
+"('Tree-Delete', 'install', 'sudo', 'apt-get update')",44
+"('Tree-Addition', 'virtualenv', 'system_site_packages:', '')",44
+"('Tree-Addition', 'script', 'make', 'html')",43
+"('Tree-Addition', 'install', 'pip', 'install coveralls')",43
+"('Insert', 'os', 'linux', '')",43
+"('Tree-Addition', 'install', 'conda', 'info -a')",42
+"('Insert', 'python', 'PYTHON-VERSION', '3.6')",41
+"('Tree-Addition', 'install', 'bash', 'miniconda.sh -b -p $HOME/miniconda')",41
+"('Update', 'after_success', 'after_success', '')",41
+"('Update', 'language', 'python', '')",41
+"('Update', 'cache', 'cache', '')",39
+"('Tree-Addition', 'script', 'nosetests', '')",38
+"('Tree-Addition', 'install', 'pip', 'install -e .')",38
+"('Update', 'before_script', 'before_script', '')",38
+"('Tree-Addition', 'python', 'PYTHON-VERSION', '3.6')",37
+"('Insert', 'include', 'python:3.7', 'dist:xenial sudo:')",37
+"('Update', 'after_success', 'coveralls', '')",37
+"('Tree-Addition', 'install', 'conda', 'update -q conda')",36
+"('Tree-Addition', 'branch', 'master', '')",35
+"('Tree-Addition', 'script', 'python', 'setup.py test')",35
+"('Tree-Delete', 'script', 'cd', '..')",34
+"('Tree-Addition', 'script', 'pushd', 'docs')",34
+"('Update', 'script', 'nosetests', '')",33
+"('Tree-Delete', 'install', 'pip', 'install autopep8')",33
+"('Update', 'sudo', 'required', '')",33
+"('Tree-Addition', 'before_install', 'bash', 'miniconda.sh -b -p $HOME/miniconda')",33
+"('Update', 'packages', 'packages', '')",32
+"('Tree-Addition', 'script', 'cd', '..')",32
+"('Update', 'script', 'cd', 'tests')",32
+"('Update', 'script', 'if', '[[ $TRAVIS_OS_NAME == \\""linux\\"" ]]; then cd ..; READTHEDOCS=True python setup.py develop; fi')",32
+"('Tree-Addition', 'distributions', 'sdist', 'bdist_wheel')",32
+"('Tree-Delete', 'install', 'pip', 'install -r requirements.txt')",32
+"('Tree-Delete', 'install', 'conda', 'update -q conda')",32
+"('Update', 'install', 'travis_wait', 'pip install theano')",32
+"('Tree-Delete', 'install', 'pip', 'install h5py pillow')",32
+"('Update', 'install', 'pip', 'install flake8')",31
+"('Tree-Addition', 'install', 'sudo', 'apt-get update')",31
+"('Tree-Addition', 'before_install', 'export', 'PATH=\\""$HOME/miniconda/bin:$PATH\\""')",31
+"('Delete', 'python', 'PYTHON-VERSION', '3.6')",30
+"('Update', 'apt', 'apt', '')",30
+"('Update', 'script', 'autopep8', '-r . --global-config .pep8 --diff | tee check_autopep8')",30
+"('Update', 'script', 'CHAINER_TEST_GPU_LIMIT=0', 'pytest -m \\""not slow and not cudnn\\"" chainer_tests')",30
+"('Update', 'script', 'autopep8', '-r . --global-config .pep8 | tee check_autopep8')",30
+"('Tree-Addition', 'tags', '', '')",30
+"('Tree-Addition', 'include', 'include', '')",30
+"('Delete', 'include', 'python:3.7', 'dist:xenial sudo:')",30
+"('Update', 'after_success', 'codecov', '')",30
+"('Update', 'stage', 'stage', '')",30
+"('Update', 'language', 'language', '')",30
+"('Update', 'before_install', 'if', '[[ $TRAVIS_OS_NAME = \\""osx\\"" ]]; then brew update >/dev/null; brew outdated pyenv || brew upgrade --quiet pyenv; brew install homebrew/boneyard/pyenv-pip-rehash;\\nPYTHON_CONFIGURE_OPTS=\\""--enable-unicode=ucs2\\"" pyenv install -ks $PYTHON_VERSION; pyenv global $PYTHON_VERSION; python --version;\\nbrew install homebrew/science/hdf5; fi')",30
+"('Tree-Delete', 'virtualenv', 'system_site_packages:', '')",30
+"('Update', 'script', 'make', 'test')",29
+"('Update', 'script', 'CHAINER_TEST_GPU_LIMIT=0', 'pytest -m \\""not slow and not cudnn and not ideep\\"" chainer_tests')",29
+"('Tree-Delete', 'install', 'hash', '-r')",29
+"('Tree-Addition', 'install', 'pip', 'install pytest')",29
+"('Tree-Delete', 'dist', 'xenial', '')",29
+"('Tree-Addition', 'if', 'type', 'in (pull_request)')",28
+"('Tree-Addition', 'packages', 'gfortran', '')",28
+"('Update', 'script', 'flake8', '')",28
+"('Tree-Addition', 'script', '', '')",28
+"('Tree-Addition', 'script', 'make', 'test')",28
+"('Tree-Addition', 'install', 'source', 'activate test-environment')",28
+"('Tree-Addition', 'install', 'pip', 'install pytest-cov')",28
+"('Tree-Addition', 'before_install', 'conda', 'config --set always_yes yes --set changeps1 no')",28
+"('Update', 'branch', 'master', '')",27
+"('Tree-Addition', 'if', '(branch', '= master OR branch = v5) AND (NOT type in (pull_request))')",27
+"('Update', 'script', 'python', 'setup.py test')",27
+"('Tree-Addition', 'script', 'flake8', '')",27
+"('Update', 'script', ""PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning'"", ""nosetests -a '!gpu,!slow' --with-doctest chainer_tests"")",27
+"('Update', 'script', ""PYTHONWARNINGS='module::DeprecationWarning'"", ""nosetests -a '!gpu,!slow' --with-doctest chainer_tests"")",27
+"('Update', 'script', 'READTHEDOCS=True', 'python setup.py develop')",27
+"('Tree-Delete', 'install', 'conda', 'config --set always_yes yes --set changeps1 no')",27
+"('Update', 'branch', 'branch', '')",26
+"('Insert', 'python', 'PYTHON-VERSION', '3.5 3.6')",26
+"('Tree-Addition', 'script', 'test', '! -s check_autopep8')",26
+"('Tree-Delete', 'script', 'popd', '')",26
+"('Update', 'install', 'pip', 'install numpy')",26
+"('Insert', 'install', '.', './ci/travis/ci.sh build')",26
+"('Tree-Addition', 'services', 'xvfb', '')",26
+"('Tree-Addition', 'before_install', 'sudo', 'apt-get update')",26
+"('Update', 'directories', 'directories', '')",26
+"('Update', 'env', 'PYTHON_VERSION=3.5.1', '')",26
+"('Update', 'env', 'PYTHON_VERSION=3.4.3', '')",26
+"('Tree-Addition', 'install', 'pip', 'install scipy')",25
+"('Insert', 'services', 'docker', '')",25
+"('Tree-Addition', 'env', 'KERAS_BACKEND=tensorflow', '')",25
+"('Tree-Addition', 'install', 'pip', 'install numpy')",24
+"('Tree-Delete', 'install', 'python', 'setup.py install')",24
+"('Tree-Addition', 'install', 'pip', 'install autopep8')",24
+"('Tree-Delete', 'install', 'pip', 'install pytest hacking mock')",24
+"('Tree-Addition', 'before_install', 'conda', 'update -q conda')",24
+"('Tree-Addition', 'before_install', 'python', '--version')",24
+"('Update', 'before_install', 'sudo', 'apt-get update -qq')",24
+"('Update', 'before_install', 'if', '[[ $TRAVIS_OS_NAME = \\""osx\\"" ]]; then brew update >/dev/null; brew outdated pyenv || brew upgrade --quiet pyenv;\\nPYTHON_CONFIGURE_OPTS=\\""--enable-unicode=ucs2\\"" pyenv install -ks $PYTHON_VERSION; pyenv global $PYTHON_VERSION; python --version;\\nbrew cask uninstall oclint; brew install homebrew/science/hdf5; fi')",24
+"('Tree-Addition', 'python', 'PYTHON-VERSION', '3.5 3.6')",23
+"('Tree-Addition', 'cache', 'directories:$HOME/.cache/pip', '')",23
+"('Tree-Addition', 'script', 'flake8', '--config=.flake8.cython')",23
+"('Tree-Addition', 'install', 'pip', 'install codecov')",23
+"('Tree-Addition', 'install', 'python', 'setup.py build_ext --inplace')",23
+"('Update', 'install', 'pip', 'install dist/*.tar.gz')",23
+"('Update', 'install', 'pip', 'install nose hacking mock')",23
+"('Update', 'include', 'include', '')",23
+"('Tree-Addition', 'after_success', 'bash', '<(curl -s https://codecov.io/bash)')",23
+"('Insert', 'dist', 'xenial', '')",23
+"('Insert', 'language', 'generic', '')",23
+"('Update', 'before_install', 'export', 'PATH=/home/travis/miniconda/bin:$PATH')",23
+"('Update', 'on', 'on', '')",23
+"('Update', 'addons', 'addons', '')",22
+"('Update', 'if', '(branch', '= master OR branch = v5) AND (NOT type in (pull_request))')",22
+"('Insert', 'python', 'PYTHON-VERSION', '3.5')",22
+"('Tree-Addition', 'python', 'PYTHON-VERSION', '3.5')",22
+"('Update', 'install', 'if', '[[ \\""$TRAVIS_PYTHON_VERSION\\"" == \\""2.7\\"" ]]; then wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh; else wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; fi')",22
+"('Tree-Delete', 'before_script', 'export', 'DISPLAY=:99.0 sh -e /etc/init.d/xvfb start sleep 3')",22
+"('Tree-Addition', 'before_script', 'export', 'DISPLAY=:99.0 sh -e /etc/init.d/xvfb start sleep 3')",22
+"('Update', 'before_install', 'wget', 'http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh')",22
+"('Tree-Addition', 'before_install', 'conda', 'update --yes conda')",22
+"('Update', 'name', 'name', '')",22
+"('Update', 'env', 'PYTHON_VERSION=3.4.4', '')",22
+"('Update', 'env', 'PYTHON_VERSION=2.7.10', '')",22
+"('Tree-Addition', 'skip_cleanup', '', '')",22
+"('Update', 'script', 'tox', '')",21
+"('Tree-Addition', 'script', '(for', ""NP in 1 2; do mpiexec -n ${NP} pytest -s -v -m 'not gpu and not slow' chainermn_tests || exit $?; done)"")",21
+"('Tree-Addition', 'script', 'export', 'OMP_NUM_THREADS=1')",21
+"('Tree-Addition', 'install', 'pip', 'install --upgrade pip')",21
+"('Update', 'install', 'conda', 'info -a')",21
+"('Update', 'install', 'travis_wait', 'pip install -U -e .[travis]')",21
+"('Insert', 'include', 'env:LINT_CHECK', 'python:2.7 install:pip install flake8 script:flake8')",21
+"('Update', 'stage', 'docs', '')",21
+"('Tree-Addition', 'stage', 'test', '')",21
+"('Tree-Addition', 'stage', 'integration', '')",21
+"('Tree-Addition', 'dist', 'bionic', '')",21
+"('Update', 'language', 'generic', '')",21
+"('Tree-Addition', 'before_install', 'eval', '\\""${MATRIX_EVAL}\\""')",21
+"('Tree-Addition', 'env', 'TOXENV=py35', '')",21
+"('Tree-Addition', 'if', 'type', '!= cron')",20
+"('Tree-Addition', 'packages', 'liblapack-dev', '')",20
