@@ -9,10 +9,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.assimbly.docconverter.DocConverter;
@@ -54,6 +57,8 @@ import org.eclipse.jgit.treewalk.filter.PathFilter;
 import com.build.analyzer.entity.CommitChange;
 import com.config.Config;
 import com.csharp.diff.CSharpDiffGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.gumtreediff.actions.EditScript;
 
 //import edu.utsa.data.DataResultsHolder;
@@ -62,10 +67,16 @@ import com.github.gumtreediff.actions.EditScript;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.gen.SyntaxException;
+import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.TreeUtils;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.MapDifference.ValueDifference;
+import com.google.common.collect.Maps;
 import com.python.parser.PythonFileParser;
 import com.travis.parser.TravisYamlFileParser;
 import com.travis.parser.TravisYamlFileParser.EditResults;
 import com.travisdiff.TravisCIDiffGenerator;
+import com.travisdiff.TravisCITree;
 import com.unity.callgraph.ClassFunction;
 import com.unity.entity.PerfFixData;
 
@@ -79,6 +90,65 @@ import edu.util.fileprocess.TextFileReaderWriter;
  */
 
 public class CommitAnalyzer {
+	
+	public class EnvMapDiffData{
+		public EnvMapDiffData(String changeType, String keyChanging, String before, String after) {
+			super();
+			this.changeType = changeType;
+			this.keyChanging = keyChanging;
+			this.before = before;
+			this.after = after;
+		}
+		private String changeType;
+		private String keyChanging;
+		private String before;
+		private String after;
+		
+		
+		public String getChangeType() {
+			return changeType;
+		}
+		public void setChangeType(String changeType) {
+			this.changeType = changeType;
+		}
+		public String getKeyChanging() {
+			return keyChanging;
+		}
+		public void setKeyChanging(String keyChanging) {
+			this.keyChanging = keyChanging;
+		}
+		public String getBefore() {
+			return before;
+		}
+		public void setBefore(String before) {
+			this.before = before;
+		}
+		public String getAfter() {
+			return after;
+		}
+		public void setAfter(String after) {
+			this.after = after;
+		}
+		
+		@Override
+		public String toString() {
+		      ObjectMapper mapper = new ObjectMapper();
+		      //Converting the Object to JSONString
+		      String jsonString="";
+			try {
+				jsonString = mapper.writeValueAsString(this);
+			} catch (JsonProcessingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return jsonString;
+		}
+		
+
+		
+		
+		
+	}
 
 	/** Various methods encapsulating methods to treats Git and commits datas */
 	private CommitAnalyzingUtils commitAnalyzingUtils;
@@ -712,6 +782,133 @@ public class CommitAnalyzer {
 
 		return classfunclist;
 	}
+	public boolean isUsingEnvMapV1(String commitId,MLCommitDiffInfo diffInfo) {
+		boolean hasEnv = false;
+		try {
+			ObjectId commitObjID = repository.resolve(commitId);
+			if (commitObjID == null)
+				return false;
+			RevCommit currentCommitObject = null;
+			RevCommit prevCommitObject= null;
+			currentCommitObject= rw.parseCommit(commitObjID);
+			RevTree currentCommitTree = currentCommitObject.getTree();
+			String travisContent=getStringFile(currentCommitTree, ".travis.yml");
+			if (travisContent.isBlank()) {
+				//TODO define logic to repeat operation with previous 
+				return false;
+			}
+			Map<String,String> envMapOfCurrent=TravisYamlFileParser.getEnvMapFromYAMLString(travisContent);
+			boolean isUsingEnvMapMethodA = !envMapOfCurrent.isEmpty();
+			TravisCITree travisTree=new TravisCITree();
+			String tempcurr = Config.patchDir + "file1.yaml";
+			File f1 = commitAnalyzingUtils.writeContentInFile(tempcurr, travisContent);
+			ITree curTree=travisTree.getTravisCITree(f1.toString());
+			f1.delete();
+			for(ITree node:curTree.breadthFirst()) {
+				if(node.hasLabel()&&node.getLabel().equals("\"env\"")) {
+					hasEnv=true;
+				}
+			}
+			String debugStr="m1 "+String.valueOf(isUsingEnvMapMethodA) + "m2: "+String.valueOf(hasEnv);
+			diffInfo.setDebug(debugStr);
+			if(isUsingEnvMapMethodA==hasEnv) {
+				diffInfo.setFailureReason("the 2 ENV methods agree");
+			}else {
+				diffInfo.setFailureReason("DISAGREE");
+			}
+			return hasEnv;
+			
+
+		} catch (RevisionSyntaxException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			diffInfo.setFailureReason(e.getMessage());
+			diffInfo.setDebug(e.getMessage());
+			return false;
+		}
+	}
+	
+	public class CommandMaps{
+		Map<String,Boolean> presenceMap;
+		Map<String,Boolean> changePresenceMap;
+		
+		public CommandMaps(Map<String, Boolean> presenceMap, Map<String, Boolean> changePresenceMap) {
+			this.presenceMap = presenceMap;
+			this.changePresenceMap = changePresenceMap;
+		}
+		
+		public Map<String, Boolean> getPresenceMap() {
+			return presenceMap;
+		}
+		public Map<String, Boolean> getChangePresenceMap() {
+			return changePresenceMap;
+		}
+		
+
+	}
+	
+	public CommandMaps nodeInFile(String commitId,List<String> nodesToLookFor){
+		try {
+			EditScript actions = null;
+			// ObjectId failobjectid = repository.resolve(fID);
+			ObjectId commitObjID = repository.resolve(commitId);
+
+			if (commitObjID == null)
+				return null;
+			RevCommit currentCommitObject = null;
+			RevCommit prevCommitObject= null;
+			currentCommitObject= rw.parseCommit(commitObjID);
+			if(currentCommitObject == null )
+				return null;
+			RevTree currentCommitTree = currentCommitObject.getTree();
+			RevTree prevCommitTree=null;
+			if(currentCommitObject.getParentCount() > 0) {
+				prevCommitObject=rw.parseCommit(currentCommitObject.getParent(0));
+				prevCommitTree=prevCommitObject.getTree();
+			}
+			DiffFormatter df = commitAnalyzingUtils.setDiffFormatter(repository, true);
+			List<DiffEntry> diffs = df.scan(prevCommitTree, currentCommitTree);
+			for (DiffEntry diff : diffs) {
+				if (diff.getNewPath().endsWith(".travis.yml")) {
+					String currentContent = getFileContentAtCommit(currentCommitObject.getName(), diff);
+					String previousContent = "";
+					if(prevCommitObject!=null) {//case where this is initial commit
+						previousContent = getFileContentAtCommit(prevCommitObject.getName(), diff);
+					}
+					
+					String tempcurr = Config.patchDir + "j1.json";
+					String tempprev = Config.patchDir + "j2.json";
+
+					File f1 = commitAnalyzingUtils.writeContentInFile(tempcurr, currentContent);
+					File f2 = commitAnalyzingUtils.writeContentInFile(tempprev, previousContent);
+
+					TravisCIDiffGenerator diffgen = new TravisCIDiffGenerator();
+					actions = diffgen.extractTravisFileChange(f2, f1);
+					TravisCITree travisTree=new TravisCITree();
+					ITree prevTravisTree=travisTree.getTravisCITree(f2.toString());
+					ITree currTravisTree=travisTree.getTravisCITree(f1.toString());
+
+					List<ITree> allNodesPrev = TreeUtils.preOrder(prevTravisTree);
+					List<ITree> allNodesCurr = TreeUtils.preOrder(currTravisTree);
+					if(previousContent.isEmpty()) {
+						allNodesPrev=null;
+					}
+					if(currentContent.isEmpty()) {
+						allNodesCurr=null;
+					}
+					List<String> allFields=commitAnalyzingUtils.extractFieldsFromTrees(allNodesPrev, allNodesCurr);
+					Map<String,Boolean> presenceMap=commitAnalyzingUtils.getCommandPresenceMap(allFields, Arrays.asList(Config.nodesToLookForAsArray));
+					Map<String,Boolean> changePresenceMap=commitAnalyzingUtils.getCommandPresenceMapInChange(actions,Arrays.asList(Config.nodesToLookForAsArray));
+					//TODO: continue implementing the command existence probability part
+					return new CommandMaps(presenceMap,changePresenceMap);
+					
+				}
+			}
+		}catch(Exception e) {
+			System.err.println(e.getMessage());
+		}
+		return null;
+	}
 
 	/*********************************
 	 * For Travis
@@ -745,18 +942,24 @@ public class CommitAnalyzer {
 							previousContent = getFileContentAtCommit(prevCommitObject.getName(), diff);
 						}
 						
-
-						String tempcurr = Config.patchDir + "j1.json";
-						String tempprev = Config.patchDir + "j2.json";
+						String tempcurr = Config.patchDir + "v1_"+commitId+".yaml";
+						String tempprev = Config.patchDir + "v2_"+commitId+".yaml";
 
 						File f1 = commitAnalyzingUtils.writeContentInFile(tempcurr, currentContent);
 						File f2 = commitAnalyzingUtils.writeContentInFile(tempprev, previousContent);
 
 						TravisCIDiffGenerator diffgen = new TravisCIDiffGenerator();
 						actions = diffgen.extractTravisFileChange(f2, f1);
+						TravisCITree travistree=new TravisCITree();
+						ITree prevTravisTree=travistree.getTravisCITree(f2.toString());
+						ITree currTravisTree=travistree.getTravisCITree(f1.toString());
+						String tempCurrAST = Config.patchDir + "v1_AST_"+commitId+".txt";
+						String tempPrevAST = Config.patchDir + "v2_AST_"+commitId+".txt";
+						commitAnalyzingUtils.writeContentInFile(tempCurrAST, currTravisTree.toTreeString());
+						commitAnalyzingUtils.writeContentInFile(tempPrevAST, prevTravisTree.toTreeString());
 
-						f1.delete();
-						f2.delete();
+						List<ITree> allnodes = TreeUtils.preOrder(prevTravisTree);
+						
 						
 						return actions;
 
@@ -768,6 +971,8 @@ public class CommitAnalyzer {
 			}
 		return actions;
 	}
+	
+
 	public EditScript extractTravisFileChange(String fID, String pID) {
 		// File debug = new File("debug-" + ID + ".txt");
 		EditScript actions = null;
@@ -775,9 +980,6 @@ public class CommitAnalyzer {
 		try {
 			// ObjectId failobjectid = repository.resolve(fID);
 			ObjectId passobjectid = repository.resolve(pID);
-
-//			if (failobjectid == null || passobjectid == null)
-//				return null;
 
 			if (passobjectid == null)
 				return null;
@@ -843,7 +1045,6 @@ public class CommitAnalyzer {
 
 					File f1 = commitAnalyzingUtils.writeContentInFile(tempcurr, currentContent);
 					File f2 = commitAnalyzingUtils.writeContentInFile(tempprev, previousContent);
-
 					TravisCIDiffGenerator diffgen = new TravisCIDiffGenerator();
 					actions = diffgen.extractTravisFileChange(f2, f1);
 

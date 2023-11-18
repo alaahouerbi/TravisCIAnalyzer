@@ -139,6 +139,17 @@ public class TravisYamlFileParser {
 
 		return json;
 	}
+	public static JsonNode getJsonObjectFromYamlString(String fileContent) throws Exception {
+		String json = DocConverter.convertYamlToJson(fileContent);
+		ObjectMapper objectMapper = new ObjectMapper();
+		JsonNode jsonNode = null;
+		try {
+			jsonNode = objectMapper.readTree(json);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return jsonNode;
+	}
 
 	public JsonNode getJsonObjectFromYamlFile(String filepath) throws Exception {
 		String yaml = DocConverter.convertFileToString(filepath);
@@ -159,6 +170,10 @@ public class TravisYamlFileParser {
 		}
 
 		return jsonNode;
+	}
+	public List<ProjectCommand> getAllProjectCommandsFromChangeNode(JsonNode node){
+		List<ProjectCommand> projcmdlist = new ArrayList<>();
+		return null;
 	}
 
 	public List<ProjectCommand> getAllProjectCommands() {
@@ -211,7 +226,7 @@ public class TravisYamlFileParser {
 					allcmds.addAll(after_script);
 					allcmds.addAll(after_success);
 					allcmds.addAll(after_failure);
-
+					
 					for (String cmd : allcmds) {
 						projcmdlist.add(new ProjectCommand(projname, cmd, envmap));
 					}
@@ -406,6 +421,39 @@ public class TravisYamlFileParser {
 
 		return allprojcmdlist;
 	}
+	public static Map<String, String> getEnvMapFromYAMLString(String travisFileContent){
+		JsonNode jsonObject=null;
+		List<String> allenvs = new ArrayList<String>();
+		Map<String, String> envs = new HashMap<String, String>();
+		if(travisFileContent.equals("")) 
+			return  new HashMap<String,String>();
+		try {
+			jsonObject=getJsonObjectFromYamlString(travisFileContent);
+			List<String> envlist = new ArrayList<>();
+			traverseForEnv(envlist,jsonObject,false);
+			allenvs.addAll(envlist);
+		}catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		BashCmdAnalysis bashcmdanalysis = new BashCmdAnalysis();
+
+		for (int index = 0; index < allenvs.size(); index++) {
+			Map<String, String> env = bashcmdanalysis.getBashEnvVariable(allenvs.get(index));
+
+			if (env != null && env.size() > 0) {
+				System.out.println(envs);
+				for (String key : env.keySet()) {
+					if (!envs.containsKey(key)) {
+						envs.put(key, env.get(key));
+					}
+				}
+			}
+		}
+
+		return envs;
+		
+	}
 
 	public Map<String, String> getEnvVariable(String proj) {
 
@@ -413,7 +461,6 @@ public class TravisYamlFileParser {
 		String projname = ProjectPropertyAnalyzer.getProjName(proj);
 		String projdir = Config.repoDir + projname;
 		String travisfile = projdir + "\\" + ".travis.yml";
-
 		File ftrvais = new File(travisfile);
 		Map<String, String> envs = new HashMap<String, String>();
 		if (ftrvais.exists()) {

@@ -21,8 +21,10 @@ public class Config {
 	
 	 //reporDir used for storing Unity Projects
 	 public static String repoDirEval= rootDir+"EvalRepos/"; /*rootDir+"GitRepo/";*/	 
-	 
-	 
+	 public final static String[] nodesToLookForAsArray = {"script","install","before_install","after_install","after_success","before_script",
+			 "deploy","before_deploy"
+             ,"after_deploy","after_failure","before_failure","after_script","before_cache",
+             "after_sucess"};
 
 	 public static String travisRepoDir = "/home/alaa/alexis-project/CloneWithGetPy/travisData";
 	
@@ -33,7 +35,7 @@ public class Config {
 	 public static String csvCmdTypeFile=rootDir+"command_type_new_ML_Non_Ml.csv";
 	 
 	 //public static String csvCITransitionFile=rootDir+"Tool_transition.csv";
-	 public static String csvCITransitionFile="/home/alaa/alexis-project/CloneWithGetPy/travisData/ML.csv";
+	 public static String csvCITransitionFile="/home/alaa/Research/Thesis/Alexis-dataset/ML-CommitsFrom-PythonProjects - ML-CommitsFrom-PythonProjects-filtered-from-deleted-projects.csv";
 	 
 	 public static String csvBlockCategory=Config.rootDir+"block_type.csv";
 			 

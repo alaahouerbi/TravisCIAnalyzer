@@ -27,14 +27,14 @@ public class TravisCIDiffGenerator {
 //		 System.out.println("test");
 		 
 		 Matcher defaultMatcher = Matchers.getInstance().getMatcher(); // retrieves the default matcher
-		 MappingStore mappings = defaultMatcher.match(prevtree, curtree); // computes the mappings between the trees
+ 		 MappingStore mappings = defaultMatcher.match(prevtree, curtree); // computes the mappings between the trees
 		 EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator(); // instantiates the simplified Chawathe script generator
 		 EditScript actions = editScriptGenerator.computeActions(mappings); // computes the edit script
 
 		 //System.out.println("test");
 		 
 		 DecorateJSonTree decojson=new DecorateJSonTree();
-		 
+		 //findOutIf before_install exists in travis ci and find out if it is in the actions
 		 for(Action action:actions)
 		 {
 			 String strfield=decojson.getJsonField(action);

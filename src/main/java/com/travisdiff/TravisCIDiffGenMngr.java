@@ -2,18 +2,23 @@ package com.travisdiff;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.assimbly.docconverter.DocConverter;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.lib.ObjectId;
@@ -21,6 +26,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 
 import com.build.analyzer.entity.CSharpChange;
 import com.build.commitanalyzer.CommitAnalyzer;
+import com.build.commitanalyzer.MLCommitDiffInfo;
 import com.config.Config;
 import com.csharp.diff.CSharpDiffGenMngr;
 import com.csharp.diff.CSharpDiffGenerator;
@@ -42,8 +48,10 @@ import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeUtils;
+import com.opencsv.CSVWriter;
 import com.travis.parser.BashCmdAnalysis;
 import com.unity.entity.PerfFixData;
+import com.utility.NodeLabelWrapper;
 import com.utility.ProjectPropertyAnalyzer;
 
 import edu.util.fileprocess.CSVReaderWriter;
@@ -59,10 +67,18 @@ public class TravisCIDiffGenMngr {
 	public void generateTravisCIChangeData() {
 		// CSVReaderWriter csvrw = new CSVReaderWriter();
 		CVSReader csvreader = new CVSReader();
+		String csvPath = Config.rootDir + "debug_commits.csv";
 		try {
-			List<TravisCommitInfo> cmtlist = csvreader.loadTravisCommitInfo(Config.csvCITransitionFile);
-			TravisCIChangeBlocks changeblocks = travicCIDiffGenerate(cmtlist);
+			CSVReaderWriter readWrite = new CSVReaderWriter();
+		    File file = new File(Config.rootDir+"debug_map_presence.csv"); 
+	        FileWriter outputfile = new FileWriter(file); 
+	        CSVWriter writer = new CSVWriter(outputfile); 
+			List<MLCommitDiffInfo> diffInfos = readWrite.getMLCommitDiffInfoFromCSV(csvPath);
+			List<String[]> mapPresenceData=new ArrayList<String[]>();
+			TravisCIChangeBlocks changeblocks = travicCIDiffGenerate(diffInfos,mapPresenceData);
+			writer.writeAll(mapPresenceData);
 			generateStatOnChangeBlock(changeblocks);
+			writer.close();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -1018,13 +1034,17 @@ public class TravisCIDiffGenMngr {
 
 	}
 
-	public TravisCIChangeBlocks travicCIDiffGenerate(List<TravisCommitInfo> fixlist) {
+	public TravisCIChangeBlocks travicCIDiffGenerate(List<MLCommitDiffInfo> mlDiffInfo,List<String[]> mapPresenceData) {
 
 		TravisCIChangeBlocks changeblocks = new TravisCIChangeBlocks();
 		int id = 1;
 		int count = 0;
-		for (TravisCommitInfo fix : fixlist) {
-			String projname = ProjectPropertyAnalyzer.getProjName(fix.getRepoUrl());
+		CSVWriter csvWriter = null;
+		Writer writer = null;
+		String[] headers = {"commandPresence","ChangePresence","projectName","commit"};
+		mapPresenceData.add(headers);
+		List<String[]> actionsDebug = new ArrayList<String []>();
+		for (MLCommitDiffInfo entry : mlDiffInfo) {
 			CommitAnalyzer cmtanalyzer = null;
 
 			System.out.println("test id==>" + id);
@@ -1032,9 +1052,15 @@ public class TravisCIDiffGenMngr {
 			id++;
 
 			try {
-				cmtanalyzer = new CommitAnalyzer("test", projname);
-				// need to fix here for fail commit id
-				EditScript actions = cmtanalyzer.extractTravisFileChange(fix.getFailCommit(), fix.getPassCommit());
+				
+				String gitUrl="https://github.com/"+entry.getProjName()+".git";
+				cmtanalyzer = new CommitAnalyzer(entry.getProjName().split("/")[0], entry.getProjName().split("/")[1], gitUrl);
+				EditScript actions = cmtanalyzer.extractTravisFileChangesFromSingleCommit(entry.getCommitID());
+				CommitAnalyzer.CommandMaps commandPresenceMap=cmtanalyzer.nodeInFile(entry.getCommitID(),Arrays.asList(Config.nodesToLookForAsArray));
+				String[] row = {commandPresenceMap.getPresenceMap().toString(),commandPresenceMap.getChangePresenceMap().toString()
+								,entry.getProjName(),entry.getCommitID()};
+				
+				mapPresenceData.add(row);
 
 				if (actions != null) {
 					count++;
@@ -1060,12 +1086,13 @@ public class TravisCIDiffGenMngr {
 						} else if (action instanceof Delete) {
 							straction = "Delete";
 						} else {
-							System.out.println("asdasdasd");
+							System.out.println("Undefined behavior");
 						}
 
 						List<String> changecmd = getCmdListFromChange(jsonblock, label);
-						NodeLabel nodelable = new NodeLabel(treenode, label, straction, action, changecmd);
-						changeblocks.addItemToMap(jsonblock, nodelable);
+			
+						NodeLabelWrapper nodelable = new NodeLabelWrapper(treenode, label, straction, action, changecmd,entry.getCommitID(),entry.getProjName());
+						changeblocks.addItemToMap(jsonblock, nodelable);	
 					}
 				}
 
@@ -1074,47 +1101,49 @@ public class TravisCIDiffGenMngr {
 				e.printStackTrace();
 			}
 		}
-
 		System.out.println("Total Diffs=" + count);
 		return changeblocks;
 
 	}
 
 	public void generateStatOnChangeBlock(TravisCIChangeBlocks changeblocks) {
-		Map<String, List<NodeLabel>> changeList = changeblocks.getChangeList();
+		Map<String, List<NodeLabelWrapper>> changeList = changeblocks.getChangeList();
 
-		Writer writer = null;
-		String file = "G:\\Research\\ML_CI\\Project_Repo\\PatchDir\\log.txt";
+		Writer statsFileWriter = null;
+		Writer outputFileWriter = null;
+		String statsFile = "/home/alaa/Research/Thesis/chris-analysis/output_satistical_analysis_expanded_keys_total_keys_stats.csv";
+		String outputFile = "/home/alaa/Research/Thesis/chris-analysis/output_satistical_analysis_expanded_keys_v3.csv";
+		CSVWriter outputFileCsvWriter = null;
+		CSVWriter statsFileCsvWriter = null;
 
 		try {
-			writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, true), "utf-8"));
-
+			outputFileWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile, true), "utf-8"));
+			outputFileCsvWriter = new CSVWriter(outputFileWriter);
+			String[] headers = {"action","key","label","cmdString","projectName","commitId"};
+			statsFileWriter = new OutputStreamWriter(new FileOutputStream(statsFile,true),"utf-8");
+			statsFileCsvWriter = new CSVWriter(statsFileWriter);
+			outputFileCsvWriter.writeNext(headers);
 		} catch (IOException ex) {
 			System.out.println(ex.getMessage());
 		}
 
 		for (String key : changeList.keySet()) {
-			List<NodeLabel> nodelabel = changeList.get(key);
-
-			for (NodeLabel node : nodelabel) {
-				String line = key + "<====>" + node.getStrAction() + "<====>" + node.getLabel() + "<=====>"
-						+ node.getCmdsString();
-				try {
-					writer.write(line);
-					writer.write("\n");
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
+			
+			List<NodeLabelWrapper> nodelabel = changeList.get(key);
+			
+			for (NodeLabelWrapper node : nodelabel) {
+				String[] row= {node.getStrAction(),key,node.getLabel(),node.getCmdsString(),node.getProjectName(),node.getCommitId()};
+				outputFileCsvWriter.writeNext(row);
 			}
-
+			
+			String[] otherRow= {key,""+nodelabel.size()};
+			statsFileCsvWriter.writeNext(otherRow);
 			System.out.println("Block Name==>" + key + "   Size==>" + nodelabel.size());
-
 		}
 
 		try {
-			writer.close();
+			outputFileCsvWriter.close();
+			statsFileCsvWriter.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -1186,25 +1215,26 @@ public class TravisCIDiffGenMngr {
 		allowedblck.add("after_failure");
 
 		String str = changestr;
-
+		if(str.startsWith("language:")) {
+			str=str.replace("language:", "");
+		}
+		if(str.startsWith(str))
+		str = str.replace("before_install:", "");
 		str = str.replace("install:", "");
 		str = str.replace("script:", "");
-		str = str.replace("before_install:", "");
 		str = str.replace("before_script:", "");
 		str = str.replace("after_script:", "");
 		str = str.replace("after_success:", "");
 		str = str.replace("after_failure:", "");
-
-		if (allowedblck.contains(changeblock)) {
-			BashCmdAnalysis bashcmdanalysis = new BashCmdAnalysis();
-			Map<String, String> envmap = new HashMap<>();
-
-			List<String> basecmds = bashcmdanalysis.getBashCommandTreeFromChange(str, envmap);
-			return basecmds;
-		} else {
-			// List<String> basecmds = new ArrayList<>();
-			return null;
+		if(str.equals("pip3")) {
+			str="pip";
 		}
+		
+		BashCmdAnalysis bashcmdanalysis = new BashCmdAnalysis();
+		Map<String, String> envmap = new HashMap<>();
+
+		List<String> basecmds = bashcmdanalysis.getBashCommandTreeFromChange(str, envmap);
+		return basecmds;
 	}
 
 	private Map<String, String> loadBlockCategory() {

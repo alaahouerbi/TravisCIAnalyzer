@@ -17,7 +17,7 @@ import com.github.gumtreediff.tree.*;
 import edu.util.fileprocess.FileWriterUtil;
 
 public class TravisCITree {
-
+	
 	public ITree getTravisCITree(String yamlfile) {
 		FileWriterUtil fwriter = new FileWriterUtil();
 

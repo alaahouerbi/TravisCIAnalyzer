@@ -22,6 +22,9 @@ public class NodeLabel {
 		this.label=label;
 		this.strAction=straction;
 		this.action=action;		
+		if(changecmds==null) {
+			changecmds=new ArrayList<String>();
+		}
 		cmds.addAll(changecmds);
 	}
 	
